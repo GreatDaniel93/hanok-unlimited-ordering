@@ -1,0 +1,4 @@
+-- Production migration applied 2026-08-12.
+-- Adds manager_get_analytics(secret, from, to) SECURITY DEFINER RPC.
+-- Reports table sessions, guests, orders, meat/hot serves, product performance, table performance, daily data and audit history for a maximum 366-day range.
+-- Access requires a valid unexpired manager access session. See production database function for canonical definition.
