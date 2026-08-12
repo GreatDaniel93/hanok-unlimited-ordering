@@ -1,1 +1,0 @@
-Deployment sync in progress.
