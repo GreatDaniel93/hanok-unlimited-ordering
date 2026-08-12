@@ -8,15 +8,17 @@ export async function POST(request) {
   const token = await getAccessToken();
   const body = await request.json().catch(() => ({}));
   if (body.action !== 'start') return jsonError('Unsupported action.');
+  const starterPreference = ['standard','no_pork'].includes(body.starter_preference) ? body.starter_preference : 'standard';
   try {
-    const { data, error } = await db().rpc('staff_start_session', {
+    const { data, error } = await db().rpc('staff_start_session_v2', {
       p_secret: token,
       p_actor: role,
       p_table_id: String(body.table_id || ''),
       p_adults: clampInt(body.adults,0,30),
       p_children_8_12: clampInt(body.children_8_12,0,30),
       p_children_4_7: clampInt(body.children_4_7,0,30),
-      p_under_4: clampInt(body.under_4,0,30)
+      p_under_4: clampInt(body.under_4,0,30),
+      p_starter_preference: starterPreference,
     });
     if (error) return jsonError(error.message, 409);
     return Response.json(data);
