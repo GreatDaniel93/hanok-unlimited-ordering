@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 function Login({onDone}){
   const [pin,setPin]=useState('');const [error,setError]=useState('');const [busy,setBusy]=useState(false);
@@ -14,8 +14,11 @@ function PinCard({role,title,description,onChanged}){
 }
 
 export default function ManagerSecurityPage(){
-  const [auth,setAuth]=useState(true);const [globalMessage,setGlobalMessage]=useState('');
+  const [auth,setAuth]=useState(null);const [globalMessage,setGlobalMessage]=useState('');
+  async function verify(){const r=await fetch('/api/manager/security',{cache:'no-store'});setAuth(r.ok);}
+  useEffect(()=>{verify();},[]);
   async function logout(){await fetch('/api/auth/logout',{method:'POST'});setAuth(false);}
+  if(auth===null)return <main className="page"><div className="card">Checking Manager access…</div></main>;
   if(!auth)return <Login onDone={()=>setAuth(true)}/>;
   return <><div className="topbar"><div className="logo">HANOK<small>WAGGA WAGGA · ACCESS & PIN SETTINGS</small></div><div className="spacer"/><a href="/manager/menu" className="btn secondary small">Manager Control</a><a href="/staff" className="btn secondary small">Staff Dashboard</a><button className="btn secondary small" onClick={logout}>Logout</button></div><main className="page" style={{maxWidth:900}}><section className="hero"><h1>Access & PIN Settings</h1><p>Manager-only control for Staff and Kitchen login PINs.</p></section>{globalMessage&&<div className="notice" style={{marginTop:14}}>{globalMessage}</div>}<div className="notice" style={{marginTop:16}}><b>Security behavior:</b> PINs are stored as hashes, never displayed back to the Manager. Changing a PIN immediately signs out all currently logged-in devices for that role. The new PIN cannot match the Manager PIN or the other operational role PIN.</div><div className="grid grid-2" style={{marginTop:16}}><PinCard role="staff" title="Staff" description="Used by floor staff to open and manage table sessions." onChanged={()=>setGlobalMessage('Staff access updated successfully.')}/><PinCard role="kitchen" title="Kitchen" description="Used by Meat KDS and Hot Kitchen KDS screens." onChanged={()=>setGlobalMessage('Kitchen access updated successfully.')}/></div><div className="card" style={{marginTop:16}}><h3 style={{marginTop:0}}>Manager PIN</h3><p className="muted" style={{marginBottom:0}}>Manager PIN changes are intentionally not available on this page to reduce the risk of accidentally locking management out of the system.</p></div></main></>;
 }
