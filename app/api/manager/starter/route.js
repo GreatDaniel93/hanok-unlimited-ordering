@@ -7,7 +7,7 @@ export async function GET() {
   if (!role) return jsonError('Manager login required.', 401);
   const token = await getAccessToken();
   try {
-    const { data, error } = await db().rpc('manager_get_starters', { p_secret: token });
+    const { data, error } = await db().rpc('manager_get_starters_v2', { p_secret: token });
     if (error) return jsonError(error.message, 500);
     return Response.json(data);
   } catch (error) {
@@ -21,6 +21,7 @@ export async function POST(request) {
   const token = await getAccessToken();
   const body = await request.json().catch(() => ({}));
   const partySize = Number.parseInt(body.party_size, 10);
+  const recipeType = ['standard','no_pork'].includes(body.recipe_type) ? body.recipe_type : 'standard';
   const items = Array.isArray(body.items) ? body.items : [];
   if (!Number.isInteger(partySize) || partySize < 2 || partySize > 6) return jsonError('Invalid Starter size.');
   if (!items.length) return jsonError('Starter must contain at least one product.');
@@ -28,8 +29,9 @@ export async function POST(request) {
     .filter((x) => x.menu_item_id && Number.isInteger(x.qty) && x.qty > 0 && x.qty <= 10);
   if (clean.length !== items.length) return jsonError('Starter contains invalid quantities.');
   try {
-    const { data, error } = await db().rpc('manager_starter_action', {
+    const { data, error } = await db().rpc('manager_starter_action_v2', {
       p_secret: token,
+      p_recipe_type: recipeType,
       p_party_size: partySize,
       p_items: clean,
     });
