@@ -2,6 +2,12 @@ import { db } from '@/lib/db';
 import { getAccessToken, requireRole } from '@/lib/auth';
 import { jsonError } from '@/lib/helpers';
 
+export async function GET() {
+  const role = await requireRole(['manager']);
+  if (!role) return jsonError('Manager login required.', 401);
+  return Response.json({ ok: true, role: 'manager' });
+}
+
 export async function POST(request) {
   const role = await requireRole(['manager']);
   if (!role) return jsonError('Manager login required.', 401);
