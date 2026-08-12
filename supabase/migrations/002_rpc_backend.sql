@@ -1,0 +1,20 @@
+-- Applied to the Hanok Wagga Supabase project on 2026-08-12.
+-- This migration adds the server-authorized RPC layer used by the Vercel app.
+-- The live database is the source of truth for the currently deployed RPC definitions.
+--
+-- Functions installed by this migration:
+-- backend_secret_valid(text)
+-- get_customer_context(text)
+-- staff_get_tables(text)
+-- add_starter_order(uuid,uuid,integer)
+-- staff_start_session(text,text,uuid,integer,integer,integer,integer)
+-- staff_session_action(text,text,uuid,text,jsonb)
+-- kitchen_get_orders(text,text)
+-- kitchen_update_order(text,uuid,text,text)
+-- print_get_pending(text)
+-- print_mark(text,uuid,boolean,integer)
+--
+-- Security model:
+-- * Customer RPCs use a table token and enforce ordering limits inside PostgreSQL.
+-- * Staff/kitchen/print RPCs validate a server-only BACKEND_SECRET against a SHA-256 hash stored in backend_config.
+-- * Direct table access remains protected by RLS.
