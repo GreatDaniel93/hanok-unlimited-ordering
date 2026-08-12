@@ -11,6 +11,7 @@ export async function POST(request) {
   try {
     const { data, error } = await db().rpc('staff_start_session', {
       p_secret: token,
+      p_actor: role,
       p_table_id: String(body.table_id || ''),
       p_adults: clampInt(body.adults,0,30),
       p_children_8_12: clampInt(body.children_8_12,0,30),
@@ -37,6 +38,7 @@ export async function PATCH(request) {
   try {
     const { data, error } = await db().rpc('staff_session_action', {
       p_secret: token,
+      p_actor: role,
       p_session_id: sessionId,
       p_action: action,
       p_payload: payload
