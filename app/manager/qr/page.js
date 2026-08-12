@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 
+const PRODUCTION_ORIGIN = 'https://orderhanokbbqwagga.com';
+
 function Login({ onDone }) {
   const [pin,setPin]=useState('');
   const [error,setError]=useState('');
@@ -21,13 +23,12 @@ function Login({ onDone }) {
   return <main className="page"><div className="card login"><div className="logo-big">HANOK</div><p className="muted">Manager · Table QR Codes</p>{error&&<div className="error">{error}</div>}<form onSubmit={submit} style={{marginTop:16}}><div className="field"><label>Manager PIN</label><input type="password" inputMode="numeric" value={pin} onChange={e=>setPin(e.target.value)} autoFocus/></div><button className="btn brand" style={{width:'100%',marginTop:12}} disabled={busy}>{busy?'Signing in…':'SIGN IN'}</button></form></div></main>;
 }
 
-function QRCard({table,origin}){
-  const url=useMemo(()=>origin?`${origin}/t/${table.token}`:'',[origin,table.token]);
+function QRCard({table}){
+  const url=useMemo(()=>`${PRODUCTION_ORIGIN}/t/${table.token}`,[table.token]);
   const [src,setSrc]=useState('');
   const [error,setError]=useState('');
   useEffect(()=>{
     let live=true;
-    if(!url)return;
     QRCode.toDataURL(url,{errorCorrectionLevel:'H',margin:2,width:640})
       .then(x=>{if(live){setSrc(x);setError('')}})
       .catch(e=>{if(live)setError(e.message||'QR generation failed')});
@@ -54,7 +55,6 @@ export default function ManagerQRPage(){
   const [auth,setAuth]=useState(true);
   const [tables,setTables]=useState([]);
   const [error,setError]=useState('');
-  const [origin,setOrigin]=useState('');
 
   async function load(){
     const r=await fetch('/api/staff/tables',{cache:'no-store'});
@@ -67,7 +67,7 @@ export default function ManagerQRPage(){
     }
     setAuth(true);setTables(j.tables||[]);setError('');
   }
-  useEffect(()=>{setOrigin(window.location.origin);load();},[]);
+  useEffect(()=>{load();},[]);
   async function logout(){await fetch('/api/auth/logout',{method:'POST'});setAuth(false);setTables([]);}
   if(!auth)return <Login onDone={()=>{setAuth(true);load();}}/>;
 
@@ -75,9 +75,9 @@ export default function ManagerQRPage(){
     <style>{`@media print{.no-print,.topbar{display:none!important}.page{max-width:none!important;padding:0!important}.qr-grid{grid-template-columns:repeat(2,1fr)!important;gap:8mm!important}.qr-card{box-shadow:none!important;border:1px solid #ccc!important;padding:8mm!important}.qr-url{display:none!important}body{background:#fff!important}}`}</style>
     <div className="topbar no-print"><div className="logo">HANOK<small>WAGGA WAGGA · TABLE QR CODES</small></div><div className="spacer"/><a href="/manager/menu" className="btn secondary small">Manager Menu</a><a href="/staff" className="btn secondary small">Staff Dashboard</a><button className="btn secondary small" onClick={logout}>Logout</button></div>
     <main className="page" style={{maxWidth:1120}}>
-      <section className="hero no-print"><h1>Table QR Codes</h1><p>Each QR is permanently linked to its table token. QR codes below use the domain you are currently visiting.</p><div className="notice" style={{marginTop:12}}><b>Current QR domain:</b> {origin||'Loading…'}<br/>Set the final production domain before printing permanent table signs.</div><div className="actions" style={{marginTop:14}}><button className="btn brand" onClick={()=>window.print()}>PRINT ALL 16 TABLES</button></div></section>
+      <section className="hero no-print"><h1>Table QR Codes</h1><p>Each QR is permanently linked to its table token and the official Hanok Wagga ordering domain.</p><div className="notice" style={{marginTop:12}}><b>Official QR domain:</b> {PRODUCTION_ORIGIN}<br/>All downloaded and printed QR codes will use this domain, even if this page is opened from an older Vercel URL.</div><div className="actions" style={{marginTop:14}}><button className="btn brand" onClick={()=>window.print()}>PRINT ALL 16 TABLES</button></div></section>
       {error&&<div className="error" style={{marginTop:12}}>{error}</div>}
-      {!tables.length&&!error?<div className="card" style={{marginTop:16}}>Loading tables…</div>:<div className="grid grid-4 qr-grid" style={{marginTop:16}}>{tables.map(t=><QRCard key={t.id} table={t} origin={origin}/>)}</div>}
+      {!tables.length&&!error?<div className="card" style={{marginTop:16}}>Loading tables…</div>:<div className="grid grid-4 qr-grid" style={{marginTop:16}}>{tables.map(t=><QRCard key={t.id} table={t}/>)}</div>}
     </main>
   </>;
 }
