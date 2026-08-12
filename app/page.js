@@ -7,8 +7,9 @@ export default function Home() {
         <div className="grid grid-3" style={{marginTop:16}}>
           <a className="card" href="/staff" style={{textDecoration:'none',color:'inherit'}}><h2>Staff</h2><p className="muted">Tables, sessions and manager controls.</p></a>
           <a className="card" href="/manager/menu" style={{textDecoration:'none',color:'inherit'}}><h2>Manager Menu</h2><p className="muted">Products, Starter Platters and order settings.</p></a>
+          <a className="card" href="/manager/tables" style={{textDecoration:'none',color:'inherit'}}><h2>Table Management</h2><p className="muted">Add, rename, disable and restore dining tables.</p></a>
           <a className="card" href="/manager/security" style={{textDecoration:'none',color:'inherit'}}><h2>Access & PIN Settings</h2><p className="muted">Manager-only Staff and Kitchen PIN management.</p></a>
-          <a className="card" href="/manager/qr" style={{textDecoration:'none',color:'inherit'}}><h2>Table QR Codes</h2><p className="muted">Generate, download and print T01–T16 QR codes.</p></a>
+          <a className="card" href="/manager/qr" style={{textDecoration:'none',color:'inherit'}}><h2>Table QR Codes</h2><p className="muted">Generate and download QR codes for active tables.</p></a>
           <a className="card" href="/kitchen/meat" style={{textDecoration:'none',color:'inherit'}}><h2>Meat KDS</h2><p className="muted">Starter platters and BBQ meat orders.</p></a>
           <a className="card" href="/kitchen/hot" style={{textDecoration:'none',color:'inherit'}}><h2>Hot Kitchen</h2><p className="muted">Hot dishes, bibimbap and soup.</p></a>
         </div>
