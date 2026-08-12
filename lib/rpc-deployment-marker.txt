@@ -1,0 +1,1 @@
+RPC backend enabled 2026-08-12. App routes use SUPABASE_PUBLISHABLE_KEY + BACKEND_SECRET, not service-role direct table access.
