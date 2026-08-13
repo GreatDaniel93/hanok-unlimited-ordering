@@ -11,26 +11,61 @@ const startedAt=new Date().toISOString();
 if(!SECRET){console.error('Missing PRINT_AGENT_SECRET');process.exit(1)}
 if(STATION && !['meat','hot'].includes(STATION)){console.error('PRINTER_STATION must be meat, hot, or blank');process.exit(1)}
 
-function escpos(order){
-  const lines=[];
-  lines.push('\x1b\x40');
-  lines.push('==========================================\n');
-  lines.push('HANOK WAGGA WAGGA\n');
-  lines.push(`${String(order.station||'').toUpperCase()} STATION\n`);
-  lines.push('==========================================\n');
-  lines.push(`TABLE: ${order.table_name||'-'}\n`);
-  if(order.label) lines.push(`${order.label}\n`);
-  if(order.source==='customer') lines.push(`ROUND: ${order.round_no||'-'}\n`);
-  lines.push('------------------------------------------\n');
-  for(const item of order.order_items||[]){
-    lines.push(`${item.item_name}  x${item.qty}\n`);
-    if(item.notes) lines.push(`  ${item.notes}\n`);
+const ESC=0x1b, GS=0x1d;
+const cmd=(...b)=>Buffer.from(b);
+const line=(s='')=>Buffer.from(`${s}\n`,'ascii');
+const center=()=>cmd(ESC,0x61,0x01);
+const left=()=>cmd(ESC,0x61,0x00);
+const boldOn=()=>cmd(ESC,0x45,0x01);
+const boldOff=()=>cmd(ESC,0x45,0x00);
+const reverseOn=()=>cmd(GS,0x42,0x01);
+const reverseOff=()=>cmd(GS,0x42,0x00);
+const size=(w=1,h=1)=>cmd(GS,0x21,((w-1)<<4)|(h-1));
+const normal=()=>size(1,1);
+const feed=(n=1)=>Buffer.from('\n'.repeat(n),'ascii');
+const divider='------------------------------------------';
+
+function sectionName(order){
+  if(order.source==='starter'){
+    const label=String(order.label||'').toUpperCase();
+    return label.includes('NO PORK')?'NO PORK STARTER':'STARTER PLATTER';
   }
-  lines.push('------------------------------------------\n');
-  lines.push(`${new Date(order.created_at).toLocaleString('en-AU')}\n`);
-  lines.push('\n\n\n');
-  lines.push('\x1d\x56\x00');
-  return Buffer.from(lines.join(''),'binary');
+  return order.station==='hot'?'HOT KITCHEN':'BBQ MEAT';
+}
+function orderType(order){
+  if(order.source==='starter') return 'STARTER';
+  return order.round_no?`ROUND ${order.round_no}`:'NEW ORDER';
+}
+function escpos(order){
+  const parts=[];
+  const items=order.order_items||[];
+  const count=items.reduce((n,i)=>n+Number(i.qty||0),0);
+  const time=new Date(order.created_at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+  const orderNo=String(order.id||'').slice(0,8).toUpperCase();
+
+  parts.push(cmd(ESC,0x40));
+  parts.push(center(),boldOn(),size(2,2),line('HANOK WAGGA'),normal(),boldOff());
+  parts.push(line(divider));
+  parts.push(boldOn(),size(4,4),line(order.table_name||'TABLE'),normal(),boldOff(),feed());
+  parts.push(reverseOn(),boldOn(),size(2,2),line(` ${sectionName(order)} `),normal(),boldOff(),reverseOff());
+  parts.push(feed(),boldOn(),size(2,1),line(orderType(order)),normal(),boldOff());
+  parts.push(line(divider));
+
+  parts.push(left(),boldOn(),size(1,2));
+  for(const item of items){
+    parts.push(line(String(item.item_name||'Item')));
+    parts.push(size(2,2),line(`  x ${Number(item.qty||0)}`),size(1,2));
+    if(item.notes) parts.push(normal(),line(`  ${item.notes}`),size(1,2));
+    parts.push(normal(),line('..........................................'),size(1,2));
+  }
+  parts.push(normal(),boldOff());
+  parts.push(center(),line(divider));
+  parts.push(boldOn(),size(2,2),line(`ITEMS: ${count}`),normal(),boldOff());
+  parts.push(line(divider));
+  parts.push(left(),boldOn(),size(1,2),line(`ORDER: ${orderNo}`),line(`TIME:  ${time}`),normal(),boldOff());
+  parts.push(feed(3));
+  parts.push(cmd(GS,0x56,0x00));
+  return Buffer.concat(parts);
 }
 
 function sendToPrinter(buffer){
@@ -43,12 +78,10 @@ function sendToPrinter(buffer){
     socket.on('error',reject);
   });
 }
-
 async function mark(orderId,printed,attempts){
   const r=await fetch(`${APP_URL}/api/print/pending`,{method:'PATCH',headers:{'content-type':'application/json','x-print-secret':SECRET},body:JSON.stringify({order_id:orderId,printed,attempts})});
   if(!r.ok) throw new Error(`Mark failed: ${r.status} ${await r.text()}`);
 }
-
 async function poll(){
   const qs=new URLSearchParams({since:startedAt});
   if(STATION) qs.set('station',STATION);
