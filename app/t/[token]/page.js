@@ -71,10 +71,11 @@ export default function CustomerPage() {
           <div className="actions" style={{margin:'16px 0 10px',overflowX:'auto',flexWrap:'nowrap'}}>
             {[["meat","BBQ Meats"],["hot","Hot Dishes"],["rice_soup","Rice & Soup"]].map(([k,l])=><button key={k} className={`btn ${category===k?'brand':'secondary'}`} onClick={()=>setCategory(k)}>{l}</button>)}
           </div>
+          {category==='meat'&&<div className="muted" style={{fontSize:12,margin:'0 2px 10px'}}>You may select up to <b>{meatLimit} meat portions</b> in total this round. Each item also has its own maximum shown below.</div>}
           <div className="grid grid-2">
-            {menu.map(item=>{const q=cart[item.id]||0;const wait=item.category==='meat'?meatWait:hotWait;return <div className="card" key={item.id} style={{display:'grid',gridTemplateColumns:'1fr auto',gap:12,alignItems:'center'}}>
-              <div><h3 style={{margin:'0 0 4px',fontSize:16}}>{item.display_name||item.name}</h3><div className="muted" style={{fontSize:12}}>{item.portion_label||item.description}</div>{wait>0&&<div style={{fontSize:11,color:'#8a5010',marginTop:6}}>Next order in {formatTime(wait)}</div>}</div>
-              <div className="actions" style={{alignItems:'center',flexWrap:'nowrap'}}><button className="btn secondary small" onClick={()=>change(item,-1)}>−</button><b>{q}</b><button className="btn secondary small" disabled={wait>0||lastOrderClosed} onClick={()=>change(item,1)}>+</button></div>
+            {menu.map(item=>{const q=cart[item.id]||0;const wait=item.category==='meat'?meatWait:hotWait;const itemMax=Number(item.max_per_round)||0;return <div className="card" key={item.id} style={{display:'grid',gridTemplateColumns:'1fr auto',gap:12,alignItems:'center'}}>
+              <div><h3 style={{margin:'0 0 4px',fontSize:16}}>{item.display_name||item.name}</h3><div className="muted" style={{fontSize:12}}>{item.portion_label||item.description}</div>{itemMax>0&&<div style={{fontSize:11,fontWeight:700,marginTop:6}}>Max {itemMax} per round</div>}{wait>0&&<div style={{fontSize:11,color:'#8a5010',marginTop:6}}>Next order in {formatTime(wait)}</div>}</div>
+              <div className="actions" style={{alignItems:'center',flexWrap:'nowrap'}}><button className="btn secondary small" onClick={()=>change(item,-1)}>−</button><b>{q}{itemMax>0?` / ${itemMax}`:''}</b><button className="btn secondary small" disabled={wait>0||lastOrderClosed||(itemMax>0&&q>=itemMax)||(item.category==='meat'&&meatCount>=meatLimit)} onClick={()=>change(item,1)}>+</button></div>
             </div>})}
           </div>
           <div className="card" style={{position:'sticky',bottom:12,marginTop:16,background:'#241c18',color:'#fff',zIndex:20}}>
