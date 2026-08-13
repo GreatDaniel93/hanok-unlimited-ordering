@@ -1,0 +1,4 @@
+-- Applied to production on 2026-08-13.
+-- Adds print_get_pending_v2(secret, since, station) for local print agents.
+-- The function preserves existing print authorization while allowing a local agent to ignore historical unprinted orders and optionally subscribe to a single station (meat or hot).
+-- PRINT_AGENT_SECRET plaintext is intentionally not committed. Production backend_config stores only its SHA-256 hash.
