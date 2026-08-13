@@ -7,7 +7,14 @@ function secretFrom(request) {
 
 export async function GET(request){
   try {
-    const {data,error}=await db().rpc('print_get_pending',{p_secret:secretFrom(request)});
+    const url=new URL(request.url);
+    const since=url.searchParams.get('since')||null;
+    const station=url.searchParams.get('station')||null;
+    const {data,error}=await db().rpc('print_get_pending_v2',{
+      p_secret:secretFrom(request),
+      p_since:since,
+      p_station:station
+    });
     if(error)return jsonError(error.message,401);
     return Response.json(data);
   } catch(error){ return jsonError(error.message,503); }
