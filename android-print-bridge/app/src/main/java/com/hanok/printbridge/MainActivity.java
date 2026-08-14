@@ -23,10 +23,26 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
+        migratePrinterRoles();
         if(Build.VERSION.SDK_INT>=33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},5);
         buildUi();
         h.post(refresh);
+    }
+
+    private void migratePrinterRoles(){
+        SharedPreferences p=getSharedPreferences(BridgeConfig.PREFS,MODE_PRIVATE);
+        int version=p.getInt("config_version",0);
+        if(version<BridgeConfig.CONFIG_VERSION){
+            String oldTotal=p.getString("total_host","");
+            String oldSplit=p.getString("split_host","");
+            SharedPreferences.Editor e=p.edit();
+            if((oldTotal.isEmpty()&&oldSplit.isEmpty()) || ("192.168.8.231".equals(oldTotal)&&"192.168.8.232".equals(oldSplit))){
+                e.putString("total_host",BridgeConfig.DEFAULT_TOTAL_IP);
+                e.putString("split_host",BridgeConfig.DEFAULT_SPLIT_IP);
+            }
+            e.putInt("config_version",BridgeConfig.CONFIG_VERSION).apply();
+        }
     }
 
     private void buildUi(){
