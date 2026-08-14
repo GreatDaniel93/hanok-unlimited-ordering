@@ -10,7 +10,6 @@ public class BridgeService extends Service {
  private String bridgeEpoch;
  private SharedPreferences prefs;
  private final Map<String,Long> firstSeen=new HashMap<>();
- private final Set<String> totalDone=new HashSet<>(),splitDone=new HashSet<>();
 
  @Override public void onCreate(){
   super.onCreate();prefs=getSharedPreferences(BridgeConfig.PREFS,MODE_PRIVATE);
@@ -42,17 +41,33 @@ public class BridgeService extends Service {
    String key=entry.getKey();List<JSONObject> group=entry.getValue();long age=System.currentTimeMillis()-firstSeen.getOrDefault(key,System.currentTimeMillis());if(age<1800)continue;
    String table=group.get(0).optString("table_name","TABLE");setStatus("Printing "+table);
    try{
-    if(!totalDone.contains(key)){printTotal(group);totalDone.add(key);}
-    if(!splitDone.contains(key)){printSplit(group);splitDone.add(key);}
+    if(!wasDelivered("total",key)){
+      printTotal(group);
+      rememberDelivered("total",key);
+    }
+    for(JSONObject o:group){
+      JSONArray items=o.optJSONArray("order_items");
+      if(items==null||items.length()==0)continue;
+      String orderId=o.optString("id","");
+      if(!wasDelivered("split",orderId)){
+        printOneSplit(o);
+        rememberDelivered("split",orderId);
+      }
+    }
     for(JSONObject o:group)mark(base,secret,o.optString("id"),true);
-    firstSeen.remove(key);totalDone.remove(key);splitDone.remove(key);setStatus("Printed "+table+" · total + split");
+    firstSeen.remove(key);
+    setStatus("Printed "+table+" · total + split");
    }catch(Exception e){setStatus("Print failed · "+shortMsg(e));}
   }
  }
 
+ private String receiptKey(String type,String id){return "delivered_"+type+"_"+Integer.toHexString(id.hashCode());}
+ private boolean wasDelivered(String type,String id){return prefs.getBoolean(receiptKey(type,id),false);}
+ private void rememberDelivered(String type,String id){prefs.edit().putBoolean(receiptKey(type,id),true).apply();}
+
  private String groupKey(JSONObject o){String source=o.optString("source","");String table=o.optString("table_name","");int round=o.optInt("round_no",0);String label=o.optString("label","");return table+"|"+source+"|"+round+"|"+label;}
  private void printTotal(List<JSONObject> group)throws Exception{String host=prefs.getString("total_host",BridgeConfig.DEFAULT_TOTAL_IP);int port=prefs.getInt("port",BridgeConfig.DEFAULT_PORT);send(host,port,totalTicket(group));}
- private void printSplit(List<JSONObject> group)throws Exception{String host=prefs.getString("split_host",BridgeConfig.DEFAULT_SPLIT_IP);int port=prefs.getInt("port",BridgeConfig.DEFAULT_PORT);for(JSONObject o:group){JSONArray items=o.optJSONArray("order_items");if(items!=null&&items.length()>0)send(host,port,stationTicket(o));}}
+ private void printOneSplit(JSONObject o)throws Exception{String host=prefs.getString("split_host",BridgeConfig.DEFAULT_SPLIT_IP);int port=prefs.getInt("port",BridgeConfig.DEFAULT_PORT);send(host,port,stationTicket(o));}
  private void send(String host,int port,byte[] body)throws Exception{if(host==null||host.isEmpty())throw new Exception("Printer IP missing");Socket s=new Socket();s.connect(new InetSocketAddress(host,port),5000);s.setSoTimeout(5000);OutputStream out=s.getOutputStream();out.write(body);out.write(new byte[]{0x1d,0x56,0x00});out.flush();s.close();}
 
  private byte[] totalTicket(List<JSONObject> group)throws Exception{
