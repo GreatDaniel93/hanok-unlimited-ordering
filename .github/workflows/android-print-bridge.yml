@@ -7,6 +7,9 @@ on:
       - '.github/workflows/android-print-bridge.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,3 +33,13 @@ jobs:
           name: hanok-print-bridge-debug-apk
           path: android-print-bridge/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+      - name: Publish APK to repository
+        working-directory: .
+        run: |
+          mkdir -p releases
+          cp android-print-bridge/app/build/outputs/apk/debug/app-debug.apk releases/Hanok-Wagga-Print-Bridge-v1.4.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add releases/Hanok-Wagga-Print-Bridge-v1.4.apk
+          git commit -m "Publish Hanok Wagga Print Bridge v1.4 APK" || exit 0
+          git push
