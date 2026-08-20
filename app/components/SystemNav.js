@@ -1,9 +1,22 @@
 'use client';
 
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
 export default function SystemNav(){
   const path=usePathname()||'/';
+  useEffect(()=>{
+    function onClick(e){
+      const el=e.target?.closest?.('button,a');
+      if(!el)return;
+      const text=(el.textContent||'').trim().toLowerCase();
+      if(text==='logout' || text==='log out'){
+        setTimeout(()=>{window.location.href='/';},180);
+      }
+    }
+    document.addEventListener('click',onClick,true);
+    return()=>document.removeEventListener('click',onClick,true);
+  },[]);
   if(path==='/' || path.startsWith('/t/')) return null;
   const inManager=path==='/manager' || path.startsWith('/manager/');
   return <div className="system-nav">
