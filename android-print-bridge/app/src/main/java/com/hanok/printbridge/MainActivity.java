@@ -16,9 +16,10 @@ import android.widget.*;
 
 public class MainActivity extends Activity {
     private EditText totalHost, splitHost, port;
-    private TextView statusText, statusPill, backgroundState;
+    private TextView statusText, statusPill, backgroundState, serviceHealth;
     private Button start, stop;
     private final Handler h = new Handler(Looper.getMainLooper());
+    private long lastRecoveryAttempt=0L;
     private final int burgundy = Color.rgb(105,32,31), ink = Color.rgb(32,28,26), cream = Color.rgb(248,246,242), line = Color.rgb(225,220,214);
 
     @Override public void onCreate(Bundle b){
@@ -28,6 +29,12 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},5);
         buildUi();
         h.post(refresh);
+    }
+
+    @Override protected void onResume(){
+        super.onResume();
+        updateBackgroundState();
+        maybeRecoverService(true);
     }
 
     private void migratePrinterRoles(){
@@ -52,12 +59,13 @@ public class MainActivity extends Activity {
 
         root.addView(text("HANOK WAGGA",32,true,ink));
         TextView sub=text("KITCHEN PRINT BRIDGE",14,true,burgundy); sub.setLetterSpacing(.12f); root.addView(sub);
-        TextView desc=text("Dual printer controller · total order + split tickets",13,false,Color.DKGRAY); desc.setPadding(0,0,0,dp(16)); root.addView(desc);
+        TextView desc=text("Always-on dual printer controller · total order + split tickets",13,false,Color.DKGRAY); desc.setPadding(0,0,0,dp(16)); root.addView(desc);
 
         LinearLayout statusCard=card(); statusCard.setPadding(dp(18),dp(16),dp(18),dp(16));
         statusPill=text("● STOPPED",13,true,Color.rgb(130,130,130)); statusCard.addView(statusPill);
         statusText=text(p.getString("status","Stopped"),17,true,ink); statusText.setPadding(0,dp(6),0,0); statusCard.addView(statusText);
-        TextView hint=text("Bridge access is built in. Keep this phone on the Wagga store Wi-Fi and connected to power.",12,false,Color.DKGRAY); hint.setPadding(0,dp(4),0,0); statusCard.addView(hint); root.addView(statusCard);
+        serviceHealth=text("Waiting for health status…",12,false,Color.DKGRAY); serviceHealth.setPadding(0,dp(5),0,0); statusCard.addView(serviceHealth);
+        TextView hint=text("Designed to stay online with the screen locked. Keep this phone on the Wagga store Wi-Fi and connected to power.",12,false,Color.DKGRAY); hint.setPadding(0,dp(5),0,0); statusCard.addView(hint); root.addView(statusCard);
 
         section(root,"PRINTERS");
         LinearLayout pcard=card(); pcard.setPadding(dp(16),dp(12),dp(16),dp(14));
@@ -74,16 +82,16 @@ public class MainActivity extends Activity {
         LinearLayout tests=new LinearLayout(this); tests.setOrientation(LinearLayout.HORIZONTAL); tests.setPadding(0,dp(10),0,0);
         Button t1=smallButton("TEST P1"), t2=smallButton("TEST P2"), tb=smallButton("TEST BOTH"); tests.addView(t1); tests.addView(t2); tests.addView(tb); root.addView(tests);
 
-        section(root,"BACKGROUND RUNNING");
+        section(root,"ALWAYS-ON PROTECTION");
         LinearLayout bg=card(); bg.setPadding(dp(16),dp(14),dp(16),dp(14));
         backgroundState=text("Checking battery settings…",14,true,ink); bg.addView(backgroundState);
-        TextView bgHelp=text("Allow unrestricted background operation so Android does not pause kitchen printing while the screen is locked.",12,false,Color.DKGRAY); bgHelp.setPadding(0,dp(4),0,dp(8)); bg.addView(bgHelp);
+        TextView bgHelp=text("v1.5 uses a foreground service, CPU wake lock, Wi-Fi performance lock, network reconnect detection, adaptive polling and automatic service restart. Enable unrestricted battery operation for maximum reliability while the screen is off.",12,false,Color.DKGRAY); bgHelp.setPadding(0,dp(4),0,dp(8)); bg.addView(bgHelp);
         Button allow=secondaryButton("ALLOW BACKGROUND RUNNING"); bg.addView(allow); root.addView(bg);
 
         start=primaryButton("START BRIDGE"); root.addView(start);
         stop=secondaryButton("STOP BRIDGE"); LinearLayout.LayoutParams slp=(LinearLayout.LayoutParams)stop.getLayoutParams(); slp.setMargins(0,dp(10),0,0); stop.setLayoutParams(slp); root.addView(stop);
 
-        TextView footer=text("orderhanokbbqwagga.com · ESC/POS · TCP 9100 · access key embedded",11,false,Color.GRAY); footer.setGravity(Gravity.CENTER); footer.setPadding(0,dp(18),0,0); root.addView(footer);
+        TextView footer=text("v1.5 · orderhanokbbqwagga.com · ESC/POS · TCP 9100 · access key embedded",11,false,Color.GRAY); footer.setGravity(Gravity.CENTER); footer.setPadding(0,dp(18),0,0); root.addView(footer);
         setContentView(sv);
 
         t1.setOnClickListener(v->test(1)); t2.setOnClickListener(v->test(2)); tb.setOnClickListener(v->{test(1);test(2);});
@@ -104,17 +112,33 @@ public class MainActivity extends Activity {
     private void updateBackgroundState(){
         boolean ok=true;
         if(Build.VERSION.SDK_INT>=23){PowerManager pm=(PowerManager)getSystemService(POWER_SERVICE);ok=pm!=null&&pm.isIgnoringBatteryOptimizations(getPackageName());}
-        if(backgroundState!=null){backgroundState.setText(ok?"✓ Background protection enabled":"⚠ Background protection recommended");backgroundState.setTextColor(ok?Color.rgb(42,120,72):Color.rgb(176,105,20));}
+        if(backgroundState!=null){backgroundState.setText(ok?"✓ Background battery protection enabled":"⚠ Tap below to allow unrestricted background running");backgroundState.setTextColor(ok?Color.rgb(42,120,72):Color.rgb(176,105,20));}
     }
 
     private void startBridge(){
         try{
             save();
-            getSharedPreferences(BridgeConfig.PREFS,MODE_PRIVATE).edit().putBoolean("enabled",true).putString("status","Starting...").apply();
-            Intent i=new Intent(this,BridgeService.class); if(Build.VERSION.SDK_INT>=26) startForegroundService(i); else startService(i);
+            getSharedPreferences(BridgeConfig.PREFS,MODE_PRIVATE).edit().putBoolean("enabled",true).putBoolean("service_alive",false).putString("status","Starting...").apply();
+            startBridgeService();
         }catch(Exception e){
-            getSharedPreferences(BridgeConfig.PREFS,MODE_PRIVATE).edit().putBoolean("enabled",false).putString("status","Start failed: "+e.getMessage()).apply(); toast("Start failed: "+e.getMessage());
+            getSharedPreferences(BridgeConfig.PREFS,MODE_PRIVATE).edit().putBoolean("enabled",false).putBoolean("service_alive",false).putString("status","Start failed: "+e.getMessage()).apply(); toast("Start failed: "+e.getMessage());
         }
+    }
+
+    private void startBridgeService(){
+        Intent i=new Intent(this,BridgeService.class);
+        if(Build.VERSION.SDK_INT>=26) startForegroundService(i); else startService(i);
+    }
+
+    private void maybeRecoverService(boolean force){
+        SharedPreferences p=getSharedPreferences(BridgeConfig.PREFS,MODE_PRIVATE);
+        if(!p.getBoolean("enabled",false))return;
+        long now=System.currentTimeMillis(),last=p.getLong("last_poll_at",0L);
+        boolean stale=last==0L||now-last>20000L;
+        if(!stale)return;
+        if(!force&&now-lastRecoveryAttempt<30000L)return;
+        lastRecoveryAttempt=now;
+        try{startBridgeService();}catch(Throwable ignored){}
     }
 
     private void stopBridge(){
@@ -144,6 +168,25 @@ public class MainActivity extends Activity {
     private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
     private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
 
-    private final Runnable refresh=new Runnable(){public void run(){SharedPreferences p=getSharedPreferences(BridgeConfig.PREFS,MODE_PRIVATE);String s=p.getString("status",p.getBoolean("enabled",false)?"Starting...":"Stopped");if(statusText!=null)statusText.setText(s);boolean on=p.getBoolean("enabled",false);if(statusPill!=null){statusPill.setText(on?"● BRIDGE ON":"● STOPPED");statusPill.setTextColor(on?Color.rgb(42,120,72):Color.rgb(130,130,130));}if(start!=null)start.setEnabled(!on);if(stop!=null)stop.setEnabled(on);updateBackgroundState();h.postDelayed(this,1000);}};
+    private String healthLine(SharedPreferences p){
+        boolean cpu=p.getBoolean("cpu_lock",false),wifi=p.getBoolean("wifi_lock",false);
+        long last=p.getLong("last_success_at",0L),now=System.currentTimeMillis();
+        String contact;
+        if(last<=0L)contact="server: waiting for first contact";
+        else {long sec=Math.max(0L,(now-last)/1000L);contact="server: "+(sec<60?sec+"s ago":(sec/60)+"m ago");}
+        return (cpu?"CPU lock ✓":"CPU lock ⚠")+" · "+(wifi?"Wi-Fi lock ✓":"Wi-Fi lock ⚠")+" · "+contact;
+    }
+
+    private final Runnable refresh=new Runnable(){public void run(){
+        SharedPreferences p=getSharedPreferences(BridgeConfig.PREFS,MODE_PRIVATE);
+        String s=p.getString("status",p.getBoolean("enabled",false)?"Starting...":"Stopped");if(statusText!=null)statusText.setText(s);
+        boolean enabled=p.getBoolean("enabled",false);long last=p.getLong("last_poll_at",0L);long age=last<=0L?Long.MAX_VALUE:System.currentTimeMillis()-last;boolean healthy=enabled&&age<20000L;
+        if(statusPill!=null){statusPill.setText(!enabled?"● STOPPED":healthy?"● BRIDGE ONLINE":"● RECOVERING");statusPill.setTextColor(!enabled?Color.rgb(130,130,130):healthy?Color.rgb(42,120,72):Color.rgb(176,105,20));}
+        if(serviceHealth!=null){serviceHealth.setText(healthLine(p));serviceHealth.setTextColor(healthy?Color.rgb(42,120,72):enabled?Color.rgb(176,105,20):Color.DKGRAY);}
+        if(start!=null)start.setEnabled(!enabled);if(stop!=null)stop.setEnabled(enabled);updateBackgroundState();
+        if(enabled&&!healthy)maybeRecoverService(false);
+        h.postDelayed(this,1000);
+    }};
+
     @Override protected void onDestroy(){h.removeCallbacks(refresh);super.onDestroy();}
 }
