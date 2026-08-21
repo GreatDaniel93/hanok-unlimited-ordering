@@ -9,7 +9,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
-    <application android:theme="@style/AppTheme" android:label="Hanok Wagga Print Bridge" android:allowBackup="false" android:supportsRtl="true">
+    <application android:name=".BridgeApp" android:theme="@style/AppTheme" android:label="Hanok Wagga Print Bridge" android:allowBackup="false" android:supportsRtl="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
