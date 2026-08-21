@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 export default function ManagerDashboard(){
   const [busy,setBusy]=useState('');
   const [message,setMessage]=useState('');
-  const [bridge,setBridge]=useState({loading:true,auth:true,online:false,last_seen_at:null,seconds_ago:null});
+  const [bridge,setBridge]=useState({loading:true,auth:true,online:false,last_seen_at:null,seconds_ago:null,pending_print_orders:0,oldest_pending_seconds:0,queue_state:'healthy'});
   const operations=[
     ['Menu & Starter','Products, Standard / No Pork Starter and order settings.','/manager/menu'],
     ['Table Management','Add, rename, set capacity, disable and restore tables.','/manager/tables'],
@@ -74,16 +74,38 @@ export default function ManagerDashboard(){
     setMessage(close ? `Closed ${j.sessions_closed||0} active table(s).` : `Cleared ${j.orders_cancelled||0} active kitchen order(s).`);
   }
 
-  const bridgeTitle=bridge.loading?'CHECKING PRINT BRIDGE…':!bridge.auth?'PRINT BRIDGE STATUS':bridge.online?'● PRINT BRIDGE ONLINE':'● PRINT BRIDGE OFFLINE';
-  const bridgeText=!bridge.auth?'Manager login is required to view live print status.':bridge.loading?'Checking the Android bridge heartbeat…':bridge.online?`Healthy · last heartbeat ${bridge.seconds_ago??0}s ago.`:bridge.last_seen_at?`Last heartbeat ${bridge.seconds_ago??'--'}s ago. Check the Android phone, Wi-Fi and Bridge service.`:'No heartbeat received yet. Start the Android Print Bridge on the store phone.';
-  const bridgeColor=bridge.loading||!bridge.auth?'#8a6d3b':bridge.online?'#247a47':'#a12b2b';
-  const bridgeBg=bridge.loading||!bridge.auth?'#fff8e8':bridge.online?'#eef8f1':'#fff0ef';
+  const totalKnown=Boolean(bridge.total_printer_checked_at);
+  const splitKnown=Boolean(bridge.split_printer_checked_at);
+  const queueCritical=bridge.queue_state==='critical';
+  const queueWarning=bridge.queue_state==='warning';
+  const systemReady=bridge.online&&bridge.total_printer_online&&bridge.split_printer_online&&!queueCritical;
+  const systemAttention=bridge.online&&!systemReady;
+  const systemTitle=bridge.loading?'CHECKING PRINT SYSTEM…':!bridge.auth?'PRINT SYSTEM STATUS':systemReady?'● PRINT SYSTEM READY':systemAttention?'● PRINT SYSTEM ATTENTION':'● PRINT BRIDGE OFFLINE';
+  const systemText=!bridge.auth?'Manager login is required to view live print status.':bridge.loading?'Checking Android bridge, both LAN printers and print queue…':systemReady?'Cloud bridge and both printers are online. Kitchen printing is ready.':!bridge.online?(bridge.last_seen_at?`Bridge heartbeat stopped ${bridge.seconds_ago??'--'}s ago. Check the Android phone, Wi-Fi and Bridge service.`:'No bridge heartbeat received yet. Start the Android Print Bridge on the store phone.'):'Bridge is online, but one or more print components need attention.';
+  const systemColor=bridge.loading||!bridge.auth?'#8a6d3b':systemReady?'#247a47':systemAttention?'#b56b00':'#a12b2b';
+  const systemBg=bridge.loading||!bridge.auth?'#fff8e8':systemReady?'#eef8f1':systemAttention?'#fff7e6':'#fff0ef';
+  const tile=(title,state,detail,color)=> <div style={{background:'#fff',border:'1px solid #ddd7d0',borderRadius:12,padding:14,minHeight:98}}><div className="eyebrow">{title}</div><div style={{fontSize:17,fontWeight:900,color,marginTop:5}}>{state}</div><div className="muted" style={{fontSize:12,marginTop:5}}>{detail}</div></div>;
+
+  const bridgeState=bridge.online?'ONLINE':bridge.last_seen_at?'OFFLINE':'NOT SEEN';
+  const bridgeDetail=bridge.online?`Heartbeat ${bridge.seconds_ago??0}s ago`:(bridge.last_seen_at?`Last seen ${bridge.seconds_ago??'--'}s ago`:'Waiting for first heartbeat');
+  const totalState=!totalKnown?'NOT CHECKED':bridge.total_printer_online?'ONLINE':'OFFLINE';
+  const splitState=!splitKnown?'NOT CHECKED':bridge.split_printer_online?'ONLINE':'OFFLINE';
+  const totalDetail=!totalKnown?'Install/start Bridge v1.6 to enable printer checks':`${bridge.total_printer_latency_ms??0}ms · checked ${bridge.total_printer_seconds_ago??0}s ago · 192.168.8.232`;
+  const splitDetail=!splitKnown?'Install/start Bridge v1.6 to enable printer checks':`${bridge.split_printer_latency_ms??0}ms · checked ${bridge.split_printer_seconds_ago??0}s ago · 192.168.8.231`;
+  const queueState=queueCritical?'CRITICAL':queueWarning?'WARNING':'HEALTHY';
+  const queueDetail=`${bridge.pending_print_orders||0} pending · oldest ${bridge.oldest_pending_seconds||0}s`;
 
   return <><div className="topbar"><div className="logo">HANOK<small>WAGGA WAGGA · MANAGER</small></div></div><main className="page" style={{maxWidth:1080}}><section className="hero"><div style={{fontSize:12,fontWeight:900,letterSpacing:'.12em',color:'#e8cda0'}}>MANAGEMENT</div><h1 style={{fontSize:'clamp(30px,4vw,48px)',marginTop:8}}>Manager Dashboard</h1><p>Configuration, reporting and restaurant controls grouped in one place.</p></section>
 
-  <div className="section-title"><h2>System Health</h2><p>Live kitchen printing connection status.</p></div>
-  <div className="card" style={{border:`2px solid ${bridgeColor}`,background:bridgeBg}}>
-    <div className="actions" style={{alignItems:'center'}}><div><div className="eyebrow">Kitchen Printing</div><h2 style={{margin:'4px 0',color:bridgeColor}}>{bridgeTitle}</h2><p className="muted" style={{margin:0}}>{bridgeText}</p>{bridge.error&&<div className="error" style={{marginTop:10}}>{bridge.error}</div>}</div><div className="spacer"/><button className="btn secondary small" onClick={checkBridge} disabled={bridge.loading}>{bridge.auth?'CHECK NOW':'SIGN IN & CHECK'}</button></div>
+  <div className="section-title"><h2>System Health</h2><p>Live cloud bridge, printer and queue status.</p></div>
+  <div className="card" style={{border:`2px solid ${systemColor}`,background:systemBg}}>
+    <div className="actions" style={{alignItems:'center'}}><div><div className="eyebrow">Kitchen Printing</div><h2 style={{margin:'4px 0',color:systemColor}}>{systemTitle}</h2><p className="muted" style={{margin:0}}>{systemText}</p>{bridge.error&&<div className="error" style={{marginTop:10}}>{bridge.error}</div>}</div><div className="spacer"/><button className="btn secondary small" onClick={checkBridge} disabled={bridge.loading}>{bridge.auth?'CHECK NOW':'SIGN IN & CHECK'}</button></div>
+    {bridge.auth&&!bridge.loading&&<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:10,marginTop:16}}>
+      {tile('Android Bridge',bridgeState,bridgeDetail,bridge.online?'#247a47':'#a12b2b')}
+      {tile('Total Printer',totalState,totalDetail,totalKnown&&bridge.total_printer_online?'#247a47':totalKnown?'#a12b2b':'#8a6d3b')}
+      {tile('Split Printer',splitState,splitDetail,splitKnown&&bridge.split_printer_online?'#247a47':splitKnown?'#a12b2b':'#8a6d3b')}
+      {tile('Print Queue',queueState,queueDetail,queueCritical?'#a12b2b':queueWarning?'#b56b00':'#247a47')}
+    </div>}
   </div>
 
   <div className="section-title"><h2>Quick Restaurant Controls</h2><p>Manager-only end-of-service and reset actions.</p></div>
