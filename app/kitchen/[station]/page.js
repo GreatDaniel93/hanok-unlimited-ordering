@@ -1,6 +1,6 @@
 'use client';
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 function Login({onDone}){
   const [pin,setPin]=useState('');const [error,setError]=useState('');
@@ -10,8 +10,30 @@ function Login({onDone}){
 
 export default function KitchenPage(){
   const {station}=useParams();const safeStation=station==='hot'?'hot':'meat';const [orders,setOrders]=useState([]);const [auth,setAuth]=useState(true);const [error,setError]=useState('');
-  async function load(){const r=await fetch(`/api/kitchen/orders?station=${safeStation}`,{cache:'no-store'});if(r.status===401){setAuth(false);return;}const j=await r.json();if(!r.ok)return setError(j.error||'Unable to load orders');setAuth(true);setOrders(j.orders||[]);setError('');}
-  useEffect(()=>{load();const p=setInterval(load,2000);return()=>clearInterval(p)},[safeStation]);
+  const loadLock=useRef(false);const orderCount=useRef(0);
+  async function load(){
+    if(loadLock.current)return;
+    loadLock.current=true;
+    try{
+      const r=await fetch(`/api/kitchen/orders?station=${safeStation}`,{cache:'no-store'});
+      if(r.status===401){setAuth(false);return;}
+      const j=await r.json();if(!r.ok){setError(j.error||'Unable to load orders');return;}
+      const next=j.orders||[];orderCount.current=next.length;setAuth(true);setOrders(next);setError('');
+    }catch(e){setError(e.message||'Unable to load orders');}
+    finally{loadLock.current=false;}
+  }
+  useEffect(()=>{
+    let timer=null;let stopped=false;
+    const schedule=()=>{
+      if(stopped)return;
+      clearTimeout(timer);
+      const delay=document.hidden?30000:(orderCount.current>0?2000:5000);
+      timer=setTimeout(async()=>{if(!document.hidden)await load();schedule();},delay);
+    };
+    const onVisible=()=>{if(!document.hidden)load();schedule();};
+    load();schedule();document.addEventListener('visibilitychange',onVisible);window.addEventListener('focus',onVisible);
+    return()=>{stopped=true;clearTimeout(timer);document.removeEventListener('visibilitychange',onVisible);window.removeEventListener('focus',onVisible)};
+  },[safeStation]);
   if(!auth)return <Login onDone={()=>{setAuth(true);load()}}/>;
   async function patch(order_id,body){const r=await fetch('/api/kitchen/orders',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({order_id,...body})});const j=await r.json();if(!r.ok)return setError(j.error||'Action failed');await load();}
   const groups={new:orders.filter(x=>x.status==='new'),preparing:orders.filter(x=>x.status==='preparing'),ready:orders.filter(x=>x.status==='ready')};
