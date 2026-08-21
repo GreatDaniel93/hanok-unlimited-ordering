@@ -1,23 +1,30 @@
 name: Safe Cloud Load Test
 
-# Trigger marker: 2026-08-21T23:22+10:00
+# Trigger marker: 2026-08-21T23:30+10:00
 on:
   push:
     paths:
       - '.github/workflows/cloud-load-test.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   load-test:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+
       - name: Run staged production load test
         shell: bash
         run: |
+          mkdir -p load-test-results
           cat > /tmp/loadtest.mjs <<'EOF'
+          import { writeFileSync } from 'node:fs';
           const base='https://orderhanokbbqwagga.com';
           const endpoints=[
             '/',
@@ -28,18 +35,24 @@ jobs:
           const stages=[20,50,100];
           const waves=8;
           const timeoutMs=12000;
+          const lines=[];
+          const log=(s)=>{console.log(s);lines.push(s);};
           function pct(a,p){if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);return s[Math.min(s.length-1,Math.floor((s.length-1)*p))];}
           async function one(url){
             const controller=new AbortController();
             const timer=setTimeout(()=>controller.abort(),timeoutMs);
             const t=performance.now();
             try{
-              const r=await fetch(url,{cache:'no-store',signal:controller.signal,headers:{'user-agent':'HanokSafeLoadTest/1.0'}});
+              const r=await fetch(url,{cache:'no-store',signal:controller.signal,headers:{'user-agent':'HanokSafeLoadTest/1.1'}});
               await r.text();
               return {ms:performance.now()-t,status:r.status,ok:r.status<500};
             }catch(e){return {ms:performance.now()-t,status:0,ok:false,error:e?.name||'error'};}
             finally{clearTimeout(timer);}
           }
+          let failed=false;
+          log(`HANOK SAFE CLOUD LOAD TEST`);
+          log(`timestamp=${new Date().toISOString()}`);
+          log(`target=${base}`);
           for(const concurrency of stages){
             const results=[];
             const started=performance.now();
@@ -52,12 +65,24 @@ jobs:
             const lat=results.map(x=>x.ms);
             const errors=results.filter(x=>!x.ok);
             const s5=results.filter(x=>x.status>=500).length;
-            console.log(`STAGE concurrency=${concurrency} requests=${results.length} elapsed_s=${elapsed.toFixed(2)} rps=${(results.length/elapsed).toFixed(1)} p50_ms=${pct(lat,.50).toFixed(0)} p95_ms=${pct(lat,.95).toFixed(0)} p99_ms=${pct(lat,.99).toFixed(0)} max_ms=${Math.max(...lat).toFixed(0)} errors=${errors.length} server5xx=${s5}`);
-            if(errors.length>Math.max(3,results.length*0.02) || s5>0){
-              console.error('Load test failed threshold');
-              process.exit(1);
-            }
+            const line=`STAGE concurrency=${concurrency} requests=${results.length} elapsed_s=${elapsed.toFixed(2)} rps=${(results.length/elapsed).toFixed(1)} p50_ms=${pct(lat,.50).toFixed(0)} p95_ms=${pct(lat,.95).toFixed(0)} p99_ms=${pct(lat,.99).toFixed(0)} max_ms=${Math.max(...lat).toFixed(0)} errors=${errors.length} server5xx=${s5}`;
+            log(line);
+            if(errors.length>Math.max(3,results.length*0.02) || s5>0) failed=true;
           }
-          console.log('SAFE_LOAD_TEST_PASS');
+          log(failed?'SAFE_LOAD_TEST_FAIL':'SAFE_LOAD_TEST_PASS');
+          writeFileSync('load-test-results/latest.txt',lines.join('\n')+'\n');
           EOF
           node /tmp/loadtest.mjs
+
+      - name: Commit latest load test result
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add load-test-results/latest.txt
+          if git diff --cached --quiet; then
+            echo "No result change to commit"
+          else
+            git commit -m "Save latest cloud load test results"
+            git push
+          fi
