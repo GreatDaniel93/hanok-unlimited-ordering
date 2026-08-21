@@ -1,5 +1,6 @@
 name: Safe Cloud Load Test
 
+# Trigger marker: 2026-08-21T23:22+10:00
 on:
   push:
     paths:
