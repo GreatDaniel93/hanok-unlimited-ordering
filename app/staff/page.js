@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 function minsLeft(end){return Math.max(0,Math.ceil((new Date(end).getTime()-Date.now())/60000));}
 
@@ -10,9 +10,19 @@ function Login({onDone}){
 }
 
 export default function StaffPage(){
-  const [data,setData]=useState(null);const [auth,setAuth]=useState(true);const [error,setError]=useState('');const [selected,setSelected]=useState(null);const [form,setForm]=useState({adults:2,children_8_12:0,children_4_7:0,under_4:0,starter_preference:'standard'});const [busy,setBusy]=useState(false);const [,tick]=useState(0);
-  async function load(){const r=await fetch('/api/staff/tables',{cache:'no-store'});if(r.status===401){setAuth(false);setData(null);return;}const j=await r.json();if(!r.ok){setError(j.error||'Unable to load tables');return;}setAuth(true);setData(j);setError('');}
-  useEffect(()=>{load();const p=setInterval(load,4000);const t=setInterval(()=>tick(x=>x+1),30000);return()=>{clearInterval(p);clearInterval(t)};},[]);
+  const [data,setData]=useState(null);const [auth,setAuth]=useState(true);const [error,setError]=useState('');const [selected,setSelected]=useState(null);const [form,setForm]=useState({adults:2,children_8_12:0,children_4_7:0,under_4:0,starter_preference:'standard'});const [busy,setBusy]=useState(false);const [,tick]=useState(0);const loadLock=useRef(false);const activeCount=useRef(0);
+  async function load(){
+    if(loadLock.current)return;
+    loadLock.current=true;
+    try{const r=await fetch('/api/staff/tables',{cache:'no-store'});if(r.status===401){setAuth(false);setData(null);return;}const j=await r.json();if(!r.ok){setError(j.error||'Unable to load tables');return;}activeCount.current=(j.tables||[]).filter(t=>t.session).length;setAuth(true);setData(j);setError('');}catch(e){setError(e.message||'Unable to load tables');}finally{loadLock.current=false;}
+  }
+  useEffect(()=>{
+    let timer=null;let stopped=false;
+    const schedule=()=>{if(stopped)return;clearTimeout(timer);const delay=document.hidden?30000:(activeCount.current>0?4000:8000);timer=setTimeout(async()=>{if(!document.hidden)await load();schedule();},delay);};
+    const onVisible=()=>{if(!document.hidden)load();schedule();};
+    load();schedule();const t=setInterval(()=>tick(x=>x+1),30000);document.addEventListener('visibilitychange',onVisible);window.addEventListener('focus',onVisible);
+    return()=>{stopped=true;clearTimeout(timer);clearInterval(t);document.removeEventListener('visibilitychange',onVisible);window.removeEventListener('focus',onVisible)};
+  },[]);
   const selectedTable=useMemo(()=>data?.tables?.find(t=>t.id===selected)||null,[data,selected]);
   const counts=useMemo(()=>{const tabs=data?.tables||[];return {dining:tabs.filter(t=>t.session).length,available:tabs.filter(t=>!t.session).length,guests:tabs.reduce((n,t)=>n+(t.session?t.session.adults+t.session.children_8_12+t.session.children_4_7+t.session.under_4:0),0),last:tabs.filter(t=>t.session&&minsLeft(t.session.ends_at)<=15).length}},[data]);
   if(!auth)return <Login onDone={()=>{setAuth(true);load()}}/>;
@@ -20,7 +30,7 @@ export default function StaffPage(){
   async function action(action,extra={}){if(!selectedTable?.session)return;setBusy(true);const r=await fetch('/api/staff/session',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({action,session_id:selectedTable.session.id,...extra})});const j=await r.json();setBusy(false);if(!r.ok)return setError(j.error||'Action failed');if(action==='close')setSelected(null);await load();}
   async function editGuests(){const s=selectedTable.session;const adults=prompt('Adults',s.adults);if(adults===null)return;const children_8_12=prompt('Children 8–12',s.children_8_12);if(children_8_12===null)return;const children_4_7=prompt('Children 4–7',s.children_4_7);if(children_4_7===null)return;const under_4=prompt('Under 4',s.under_4);if(under_4===null)return;action('edit_guests',{adults,children_8_12,children_4_7,under_4});}
   async function move(){const dest=prompt('Destination table name, e.g. T05');if(!dest)return;const t=data.tables.find(x=>x.name.toUpperCase()===dest.toUpperCase()&&!x.session);if(!t)return setError('Destination table is not available.');action('move',{table_id:t.id});}
-  async function logout(){await fetch('/api/auth/logout',{method:'POST'});setAuth(false);}
+  async function logout(){await fetch('/api/auth/logout',{method:'POST'});window.location.href='/';}
   return <>
     <div className="topbar"><div className="logo">HANOK<small>WAGGA WAGGA · STAFF DASHBOARD</small></div><div className="spacer"/><span className="badge new">{data?.role?.toUpperCase()||'STAFF'}</span><button className="btn secondary small" onClick={logout}>Logout</button></div>
     <main className="page">
