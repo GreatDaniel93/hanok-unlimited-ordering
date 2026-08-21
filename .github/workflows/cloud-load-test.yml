@@ -1,0 +1,62 @@
+name: Safe Cloud Load Test
+
+on:
+  push:
+    paths:
+      - '.github/workflows/cloud-load-test.yml'
+  workflow_dispatch:
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run staged production load test
+        shell: bash
+        run: |
+          cat > /tmp/loadtest.mjs <<'EOF'
+          const base='https://orderhanokbbqwagga.com';
+          const endpoints=[
+            '/',
+            '/api/customer/session?token=loadtest-invalid-a',
+            '/api/customer/session?token=loadtest-invalid-b',
+            '/api/customer/session?token=loadtest-invalid-c'
+          ];
+          const stages=[20,50,100];
+          const waves=8;
+          const timeoutMs=12000;
+          function pct(a,p){if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);return s[Math.min(s.length-1,Math.floor((s.length-1)*p))];}
+          async function one(url){
+            const controller=new AbortController();
+            const timer=setTimeout(()=>controller.abort(),timeoutMs);
+            const t=performance.now();
+            try{
+              const r=await fetch(url,{cache:'no-store',signal:controller.signal,headers:{'user-agent':'HanokSafeLoadTest/1.0'}});
+              await r.text();
+              return {ms:performance.now()-t,status:r.status,ok:r.status<500};
+            }catch(e){return {ms:performance.now()-t,status:0,ok:false,error:e?.name||'error'};}
+            finally{clearTimeout(timer);}
+          }
+          for(const concurrency of stages){
+            const results=[];
+            const started=performance.now();
+            for(let w=0;w<waves;w++){
+              const batch=Array.from({length:concurrency},(_,i)=>one(base+endpoints[i%endpoints.length]));
+              results.push(...await Promise.all(batch));
+              await new Promise(r=>setTimeout(r,250));
+            }
+            const elapsed=(performance.now()-started)/1000;
+            const lat=results.map(x=>x.ms);
+            const errors=results.filter(x=>!x.ok);
+            const s5=results.filter(x=>x.status>=500).length;
+            console.log(`STAGE concurrency=${concurrency} requests=${results.length} elapsed_s=${elapsed.toFixed(2)} rps=${(results.length/elapsed).toFixed(1)} p50_ms=${pct(lat,.50).toFixed(0)} p95_ms=${pct(lat,.95).toFixed(0)} p99_ms=${pct(lat,.99).toFixed(0)} max_ms=${Math.max(...lat).toFixed(0)} errors=${errors.length} server5xx=${s5}`);
+            if(errors.length>Math.max(3,results.length*0.02) || s5>0){
+              console.error('Load test failed threshold');
+              process.exit(1);
+            }
+          }
+          console.log('SAFE_LOAD_TEST_PASS');
+          EOF
+          node /tmp/loadtest.mjs
