@@ -78,7 +78,7 @@ export default function ManagerDashboard(){
   const splitKnown=Boolean(bridge.split_printer_checked_at);
   const queueCritical=bridge.queue_state==='critical';
   const queueWarning=bridge.queue_state==='warning';
-  const systemReady=bridge.online&&bridge.total_printer_online&&bridge.split_printer_online&&!queueCritical;
+  const systemReady=bridge.online&&bridge.total_printer_online&&bridge.split_printer_online&&!queueCritical&&!queueWarning;
   const systemAttention=bridge.online&&!systemReady;
   const systemTitle=bridge.loading?'CHECKING PRINT SYSTEM…':!bridge.auth?'PRINT SYSTEM STATUS':systemReady?'● PRINT SYSTEM READY':systemAttention?'● PRINT SYSTEM ATTENTION':'● PRINT BRIDGE OFFLINE';
   const systemText=!bridge.auth?'Manager login is required to view live print status.':bridge.loading?'Checking Android bridge, both LAN printers and print queue…':systemReady?'Cloud bridge and both printers are online. Kitchen printing is ready.':!bridge.online?(bridge.last_seen_at?`Bridge heartbeat stopped ${bridge.seconds_ago??'--'}s ago. Check the Android phone, Wi-Fi and Bridge service.`:'No bridge heartbeat received yet. Start the Android Print Bridge on the store phone.'):'Bridge is online, but one or more print components need attention.';
