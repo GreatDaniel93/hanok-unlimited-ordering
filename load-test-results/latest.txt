@@ -1,0 +1,7 @@
+HANOK SAFE CLOUD LOAD TEST
+timestamp=2026-08-21T13:31:38.049Z
+target=https://orderhanokbbqwagga.com
+STAGE concurrency=20 requests=160 elapsed_s=10.08 rps=15.9 p50_ms=360 p95_ms=1274 p99_ms=1430 max_ms=1449 errors=0 server5xx=0
+STAGE concurrency=50 requests=400 elapsed_s=10.99 rps=36.4 p50_ms=350 p95_ms=1046 p99_ms=1471 max_ms=1732 errors=0 server5xx=0
+STAGE concurrency=100 requests=800 elapsed_s=10.07 rps=79.5 p50_ms=362 p95_ms=963 p99_ms=1049 max_ms=1146 errors=0 server5xx=0
+SAFE_LOAD_TEST_PASS
