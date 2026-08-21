@@ -5,6 +5,7 @@ export default function ManagerDashboard(){
   const [busy,setBusy]=useState('');
   const [message,setMessage]=useState('');
   const [bridge,setBridge]=useState({loading:true,auth:true,online:false,last_seen_at:null,seconds_ago:null,pending_print_orders:0,oldest_pending_seconds:0,queue_state:'healthy'});
+  const [opening,setOpening]=useState({running:false,result:null,error:''});
   const operations=[
     ['Menu & Starter','Products, Standard / No Pork Starter and order settings.','/manager/menu'],
     ['Table Management','Add, rename, set capacity, disable and restore tables.','/manager/tables'],
@@ -55,6 +56,20 @@ export default function ManagerDashboard(){
     await loadBridgeStatus();
   }
 
+  async function runOpeningCheck(){
+    setOpening({running:true,result:null,error:''});
+    let r=await fetch('/api/manager/opening-check',{cache:'no-store'});
+    if(r.status===401){
+      const ok=await managerLogin();
+      if(!ok){setOpening({running:false,result:null,error:'Manager login required.'});return;}
+      r=await fetch('/api/manager/opening-check',{cache:'no-store'});
+    }
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok){setOpening({running:false,result:null,error:j.error||'Opening check failed.'});return;}
+    setOpening({running:false,result:j,error:''});
+    await loadBridgeStatus();
+  }
+
   async function runBulk(action){
     const close=action==='close_all_tables';
     const text=close
@@ -95,6 +110,10 @@ export default function ManagerDashboard(){
   const queueState=queueCritical?'CRITICAL':queueWarning?'WARNING':'HEALTHY';
   const queueDetail=`${bridge.pending_print_orders||0} pending · oldest ${bridge.oldest_pending_seconds||0}s`;
 
+  const openingResult=opening.result;
+  const openingColor=!openingResult?'#8a6d3b':openingResult.ready?'#247a47':'#a12b2b';
+  const openingBg=!openingResult?'#fff8e8':openingResult.ready?'#eef8f1':'#fff0ef';
+
   return <><div className="topbar"><div className="logo">HANOK<small>WAGGA WAGGA · MANAGER</small></div></div><main className="page" style={{maxWidth:1080}}><section className="hero"><div style={{fontSize:12,fontWeight:900,letterSpacing:'.12em',color:'#e8cda0'}}>MANAGEMENT</div><h1 style={{fontSize:'clamp(30px,4vw,48px)',marginTop:8}}>Manager Dashboard</h1><p>Configuration, reporting and restaurant controls grouped in one place.</p></section>
 
   <div className="section-title"><h2>System Health</h2><p>Live cloud bridge, printer and queue status.</p></div>
@@ -106,6 +125,21 @@ export default function ManagerDashboard(){
       {tile('Split Printer',splitState,splitDetail,splitKnown&&bridge.split_printer_online?'#247a47':splitKnown?'#a12b2b':'#8a6d3b')}
       {tile('Print Queue',queueState,queueDetail,queueCritical?'#a12b2b':queueWarning?'#b56b00':'#247a47')}
     </div>}
+  </div>
+
+  <div className="section-title"><h2>Opening System Check</h2><p>Run once before service to verify the full ordering and printing chain.</p></div>
+  <div className="card" style={{border:`2px solid ${openingColor}`,background:openingBg}}>
+    <div className="actions" style={{alignItems:'center'}}>
+      <div><div className="eyebrow">Pre-Service Readiness</div><h2 style={{margin:'4px 0',color:openingColor}}>{opening.running?'RUNNING SYSTEM CHECK…':openingResult?(openingResult.ready?'✓ SYSTEM READY FOR SERVICE':'✕ SYSTEM NOT READY'):'RUN BEFORE OPENING'}</h2><p className="muted" style={{margin:0}}>{opening.running?'Checking cloud, database, Android Bridge, both printers, print queue, tables and menu…':openingResult?(openingResult.ready?'All required systems passed the opening check.':'One or more required systems failed. Fix the red item(s) before service.'):'This is a read-only check. It does not create orders or print test tickets.'}</p></div>
+      <div className="spacer"/><button className="btn secondary small" onClick={runOpeningCheck} disabled={opening.running}>{opening.running?'CHECKING…':'RUN OPENING CHECK'}</button>
+    </div>
+    {opening.error&&<div className="error" style={{marginTop:12}}>{opening.error}</div>}
+    {openingResult&&<>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:10,marginTop:16}}>
+        {(openingResult.checks||[]).map(c=>tile(c.label,c.ok?'PASS':'FAIL',c.detail,c.ok?'#247a47':'#a12b2b'))}
+      </div>
+      <div className="muted" style={{fontSize:12,marginTop:12}}>Checked {openingResult.checked_at?new Date(openingResult.checked_at).toLocaleString():'now'} · API/DB response {openingResult.api_latency_ms??'--'}ms</div>
+    </>}
   </div>
 
   <div className="section-title"><h2>Quick Restaurant Controls</h2><p>Manager-only end-of-service and reset actions.</p></div>
