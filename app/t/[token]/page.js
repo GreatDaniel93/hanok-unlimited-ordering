@@ -1,6 +1,6 @@
 'use client';
 import { useParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 function formatTime(ms) {
   const seconds = Math.max(0, Math.floor(ms / 1000));
@@ -17,16 +17,37 @@ export default function CustomerPage() {
   const [cart,setCart] = useState({});
   const [now,setNow] = useState(Date.now());
   const [submitting,setSubmitting] = useState(false);
+  const submitLock = useRef(false);
+  const loadLock = useRef(false);
 
   async function load() {
+    if(loadLock.current) return;
+    loadLock.current=true;
     try {
       const r = await fetch(`/api/customer/session?token=${encodeURIComponent(token)}`, {cache:'no-store'});
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || 'Unable to load table.');
       setData(j);setError('');
     } catch (e) { setError(e.message); }
+    finally { loadLock.current=false; }
   }
-  useEffect(()=>{ load(); const p=setInterval(load,5000); const t=setInterval(()=>setNow(Date.now()),1000); return()=>{clearInterval(p);clearInterval(t)}; },[token]);
+
+  useEffect(()=>{
+    let timer=null; let stopped=false;
+    const schedule=()=>{
+      if(stopped)return;
+      clearTimeout(timer);
+      const delay=document.hidden?60000:15000;
+      timer=setTimeout(async()=>{if(!document.hidden)await load();schedule();},delay);
+    };
+    const onVisible=()=>{if(!document.hidden){load();setNow(Date.now())}schedule();};
+    load();schedule();
+    document.addEventListener('visibilitychange',onVisible);
+    window.addEventListener('focus',onVisible);
+    return()=>{stopped=true;clearTimeout(timer);document.removeEventListener('visibilitychange',onVisible);window.removeEventListener('focus',onVisible)};
+  },[token]);
+
+  useEffect(()=>{const t=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(t)},[]);
 
   const session=data?.session;
   const menu=useMemo(()=>data?.menu?.filter(x=>x.category===category)||[],[data,category]);
@@ -46,13 +67,16 @@ export default function CustomerPage() {
   }
 
   async function submit(){
-    if(!itemCount)return;
-    setSubmitting(true);setError('');
-    const items=Object.entries(cart).filter(([,qty])=>qty>0).map(([menu_item_id,qty])=>({menu_item_id,qty}));
-    const r=await fetch('/api/customer/order',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token,items})});
-    const j=await r.json();
-    if(!r.ok){setError(j.error||'Order failed.');setSubmitting(false);return;}
-    setCart({});setSubmitting(false);await load();
+    if(!itemCount||submitLock.current)return;
+    submitLock.current=true;setSubmitting(true);setError('');
+    try{
+      const items=Object.entries(cart).filter(([,qty])=>qty>0).map(([menu_item_id,qty])=>({menu_item_id,qty}));
+      const r=await fetch('/api/customer/order',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token,items})});
+      const j=await r.json();
+      if(!r.ok){setError(j.error||'Order failed.');return;}
+      setCart({});await load();
+    }catch(e){setError(e.message||'Order failed.');}
+    finally{setSubmitting(false);submitLock.current=false;}
   }
 
   return <>
@@ -75,14 +99,14 @@ export default function CustomerPage() {
           <div className="grid grid-2">
             {menu.map(item=>{const q=cart[item.id]||0;const wait=item.category==='meat'?meatWait:hotWait;const itemMax=Number(item.max_per_round)||0;return <div className="card" key={item.id} style={{display:'grid',gridTemplateColumns:'1fr auto',gap:12,alignItems:'center'}}>
               <div><h3 style={{margin:'0 0 4px',fontSize:16}}>{item.display_name||item.name}</h3><div className="muted" style={{fontSize:12}}>{item.portion_label||item.description}</div>{itemMax>0&&<div style={{fontSize:11,fontWeight:700,marginTop:6}}>Max {itemMax} per round</div>}{wait>0&&<div style={{fontSize:11,color:'#8a5010',marginTop:6}}>Next order in {formatTime(wait)}</div>}</div>
-              <div className="actions" style={{alignItems:'center',flexWrap:'nowrap'}}><button className="btn secondary small" onClick={()=>change(item,-1)}>−</button><b>{q}{itemMax>0?` / ${itemMax}`:''}</b><button className="btn secondary small" disabled={wait>0||lastOrderClosed||(itemMax>0&&q>=itemMax)||(item.category==='meat'&&meatCount>=meatLimit)} onClick={()=>change(item,1)}>+</button></div>
+              <div className="actions" style={{alignItems:'center',flexWrap:'nowrap'}}><button className="btn secondary small" disabled={submitting} onClick={()=>change(item,-1)}>−</button><b>{q}{itemMax>0?` / ${itemMax}`:''}</b><button className="btn secondary small" disabled={submitting||wait>0||lastOrderClosed||(itemMax>0&&q>=itemMax)||(item.category==='meat'&&meatCount>=meatLimit)} onClick={()=>change(item,1)}>+</button></div>
             </div>})}
           </div>
           <div className="card" style={{position:'sticky',bottom:12,marginTop:16,background:'#241c18',color:'#fff',zIndex:20}}>
             <div style={{display:'flex',alignItems:'center',gap:12}}><div><b>{itemCount} items</b><div style={{fontSize:12,color:'#d8c7aa'}}>Meat {meatCount} / {meatLimit} this round</div></div><div className="spacer"/><button className="btn gold" disabled={!itemCount||submitting||lastOrderClosed} onClick={submit}>{submitting?'SENDING…':'PLACE ORDER'}</button></div>
           </div>
           <div className="section-title"><h3>Your recent orders</h3></div>
-          <div className="card">{!data.recent_orders?.length?<span className="muted">No reorder submitted yet.</span>:data.recent_orders.map(o=><div key={o.id} style={{borderBottom:'1px solid var(--line)',padding:'10px 0'}}><b>Round {o.round_no}</b> · <span className="muted">{o.status}</span><div style={{fontSize:13,marginTop:4}}>{o.order_items.map(i=>`${i.item_name} ×${i.qty}`).join(' · ')}</div></div>)}</div>
+          <div className="card">{!data.recent_orders?.length?<span className="muted">No reorder submitted yet.</span>:data.recent_orders.map(o=><div key={o.id} style={{borderBottom:'1px solid var(--line)',padding:'10px 0'}}><b>Order</b> · <span className="muted">{o.status}</span><div style={{fontSize:13,marginTop:4}}>{o.order_items.map(i=>`${i.item_name} ×${i.qty}`).join(' · ')}</div></div>)}</div>
         </>}
       </>}
     </main>
