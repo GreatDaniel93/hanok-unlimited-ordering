@@ -41,13 +41,15 @@ public final class DeviceHealthReporter {
                 NetworkCapabilities nc=n==null||cm==null?null:cm.getNetworkCapabilities(n);
                 if(nc!=null){if(nc.hasTransport(NetworkCapabilities.TRANSPORT_WIFI))network="wifi";else if(nc.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))network="ethernet";else if(nc.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))network="cellular";else network="other";}
             }catch(Throwable ignored){}
+            String appVersion="unknown";
+            try{appVersion=app.getPackageManager().getPackageInfo(app.getPackageName(),0).versionName;}catch(Throwable ignored){}
 
             long started=p.getLong("service_started_at",0L);
             long processStarted=p.getLong("process_started_at",0L);
             long lastPoll=p.getLong("last_poll_at",0L);
             long lastSuccess=p.getLong("last_success_at",0L);
             JSONObject j=new JSONObject();
-            j.put("app_version",BuildConfig.VERSION_NAME);
+            j.put("app_version",appVersion);
             j.put("manufacturer",Build.MANUFACTURER);
             j.put("model",Build.MODEL);
             j.put("android_version",Build.VERSION.RELEASE);
