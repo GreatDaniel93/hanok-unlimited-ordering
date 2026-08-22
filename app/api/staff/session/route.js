@@ -9,8 +9,9 @@ export async function POST(request) {
   const body = await request.json().catch(() => ({}));
   if (body.action !== 'start') return jsonError('Unsupported action.');
   const starterPreference = ['standard','no_pork'].includes(body.starter_preference) ? body.starter_preference : 'standard';
+  const serviceMode = ['bbq','lunch'].includes(body.service_mode) ? body.service_mode : 'bbq';
   try {
-    const { data, error } = await db().rpc('staff_start_session_v2', {
+    const { data, error } = await db().rpc('staff_start_session_v3', {
       p_secret: token,
       p_actor: role,
       p_table_id: String(body.table_id || ''),
@@ -19,6 +20,7 @@ export async function POST(request) {
       p_children_4_7: clampInt(body.children_4_7,0,30),
       p_under_4: clampInt(body.under_4,0,30),
       p_starter_preference: starterPreference,
+      p_service_mode: serviceMode,
     });
     if (error) return jsonError(error.message, 409);
     return Response.json(data);
