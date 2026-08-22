@@ -1,14 +1,14 @@
 Hanok Wagga Print Bridge v1.8
-UTC: 2026-08-22T05:00:19Z
-Outcome: failure
+UTC: 2026-08-22T05:03:10Z
+Outcome: success
 
 Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:preBuild UP-TO-DATE
 > Task :app:preDebugBuild UP-TO-DATE
 > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
-> Task :app:javaPreCompileDebug
 > Task :app:generateDebugResValues
 > Task :app:checkDebugAarMetadata
+> Task :app:javaPreCompileDebug
 > Task :app:mapDebugSourceSetPaths
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
@@ -25,37 +25,25 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:compressDebugAssets
 > Task :app:processDebugJavaRes NO-SOURCE
 > Task :app:checkDebugDuplicateClasses
-> Task :app:desugarDebugFileDependencies
 > Task :app:processDebugManifestForPackage
-> Task :app:mergeExtDexDebug
-> Task :app:mergeLibDexDebug
+> Task :app:desugarDebugFileDependencies
 > Task :app:mergeDebugJavaResource
 > Task :app:mergeDebugJniLibFolders
+> Task :app:mergeExtDexDebug
+> Task :app:mergeLibDexDebug
 > Task :app:mergeDebugNativeLibs NO-SOURCE
 > Task :app:stripDebugDebugSymbols NO-SOURCE
 > Task :app:processDebugResources
 > Task :app:validateSigningDebug
-
 > Task :app:compileDebugJavaWithJavac
-/home/runner/work/hanok-unlimited-ordering/hanok-unlimited-ordering/android-print-bridge/app/src/main/java/com/hanok/printbridge/DeviceHealthReporter.java:50: error: cannot find symbol
-            j.put("app_version",BuildConfig.VERSION_NAME);
-                                ^
-  symbol:   variable BuildConfig
-  location: class DeviceHealthReporter
-1 error
+> Task :app:dexBuilderDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+> Task :app:mergeProjectDexDebug
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect
+> Task :app:assembleDebug
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787374978531.json
 
-> Task :app:compileDebugJavaWithJavac FAILED
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787374808133.json
-
-FAILURE: Build failed with an exception.
-
-* What went wrong:
-Execution failed for task ':app:compileDebugJavaWithJavac'.
-> Compilation failed; see the compiler error output for details.
-
-* Try:
-> Run with --info option to get more log output.
-> Run with --scan to get full insights.
-
-BUILD FAILED in 15s
-25 actionable tasks: 25 executed
+BUILD SUCCESSFUL in 15s
+31 actionable tasks: 31 executed
