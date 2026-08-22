@@ -43,6 +43,7 @@ public final class DeviceHealthReporter {
             }catch(Throwable ignored){}
 
             long started=p.getLong("service_started_at",0L);
+            long processStarted=p.getLong("process_started_at",0L);
             long lastPoll=p.getLong("last_poll_at",0L);
             long lastSuccess=p.getLong("last_success_at",0L);
             JSONObject j=new JSONObject();
@@ -61,9 +62,10 @@ public final class DeviceHealthReporter {
             j.put("service_alive",p.getBoolean("service_alive",false));
             j.put("cpu_lock",p.getBoolean("cpu_lock",false));
             j.put("wifi_lock",p.getBoolean("wifi_lock",false));
-            j.put("service_restart_count",p.getInt("service_restart_count",0));
+            j.put("process_start_count",p.getInt("process_start_count",0));
             j.put("watchdog_fire_count",p.getInt("watchdog_fire_count",0));
             j.put("service_uptime_seconds",started>0?Math.max(0,(now-started)/1000L):0);
+            j.put("process_uptime_seconds",processStarted>0?Math.max(0,(now-processStarted)/1000L):0);
             j.put("last_poll_age_seconds",lastPoll>0?Math.max(0,(now-lastPoll)/1000L):-1);
             j.put("last_success_age_seconds",lastSuccess>0?Math.max(0,(now-lastSuccess)/1000L):-1);
             j.put("consecutive_errors",p.getInt("consecutive_errors",0));
