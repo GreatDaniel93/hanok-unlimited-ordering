@@ -27,19 +27,49 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      - run: gradle assembleDebug
+      - name: Build APK
+        id: build_apk
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle assembleDebug 2>&1 | tee ../android-build.log
+      - name: Persist build diagnostics
+        if: always()
+        working-directory: .
+        shell: bash
+        run: |
+          mkdir -p build-results
+          {
+            echo "Hanok Wagga Print Bridge v1.8"
+            echo "UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "Outcome: ${{ steps.build_apk.outcome }}"
+            echo
+            tail -n 120 android-build.log 2>/dev/null || true
+          } > build-results/android-v1.8.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add build-results/android-v1.8.txt
+          git commit -m "Save Android v1.8 build result" || true
+          git push || true
       - uses: actions/upload-artifact@v4
+        if: steps.build_apk.outcome == 'success'
         with:
           name: hanok-print-bridge-v1.8-apk
           path: android-print-bridge/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
       - name: Publish APK to repository
+        if: steps.build_apk.outcome == 'success'
         working-directory: .
         run: |
           mkdir -p releases
           cp android-print-bridge/app/build/outputs/apk/debug/app-debug.apk releases/Hanok-Wagga-Print-Bridge-v1.8.apk
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase
           git add releases/Hanok-Wagga-Print-Bridge-v1.8.apk
           git commit -m "Publish Hanok Wagga Print Bridge v1.8 APK" || exit 0
           git push
+      - name: Fail workflow if build failed
+        if: steps.build_apk.outcome != 'success'
+        run: exit 1
