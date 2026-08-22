@@ -277,7 +277,7 @@ public class BridgeService extends Service {
         }catch(Throwable ignored){}
     }
 
-    private String groupKey(JSONObject o){return o.optString("table_name","")+"|"+o.optString("source","")+"|"+o.optInt("round_no",0)+"|"+o.optString("label","");}
+    private String groupKey(JSONObject o){String session=o.optString("session_id","");if(session.isEmpty())session=o.optString("table_name","");return session+"|"+o.optString("source","")+"|"+o.optInt("round_no",0)+"|"+o.optString("label","");}
     private void printTotal(List<JSONObject> group)throws Exception{send(prefs.getString("total_host",BridgeConfig.DEFAULT_TOTAL_IP),prefs.getInt("port",BridgeConfig.DEFAULT_PORT),totalTicket(group));}
     private void printOneSplit(JSONObject o)throws Exception{send(prefs.getString("split_host",BridgeConfig.DEFAULT_SPLIT_IP),prefs.getInt("port",BridgeConfig.DEFAULT_PORT),stationTicket(o));}
 
