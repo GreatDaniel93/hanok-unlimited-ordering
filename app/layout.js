@@ -1,6 +1,7 @@
 import './globals.css';
 import SystemNav from './components/SystemNav';
 import LanguageSwitcher from './components/LanguageSwitcher';
+import LunchLanguagePatch from './components/LunchLanguagePatch';
 
 export const metadata = {
   title: 'Hanok Unlimited Ordering',
@@ -8,5 +9,5 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
-  return <html lang="en"><body><SystemNav/><LanguageSwitcher/>{children}</body></html>;
+  return <html lang="en"><body><SystemNav/><LanguageSwitcher/><LunchLanguagePatch/>{children}</body></html>;
 }
