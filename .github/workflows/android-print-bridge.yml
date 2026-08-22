@@ -41,21 +41,21 @@ jobs:
         run: |
           mkdir -p build-results
           {
-            echo "Hanok Wagga Print Bridge v1.8"
+            echo "Hanok Wagga Print Bridge v1.9"
             echo "UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
             echo "Outcome: ${{ steps.build_apk.outcome }}"
             echo
             tail -n 120 android-build.log 2>/dev/null || true
-          } > build-results/android-v1.8.txt
+          } > build-results/android-v1.9.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add build-results/android-v1.8.txt
-          git commit -m "Save Android v1.8 build result" || true
+          git add build-results/android-v1.9.txt
+          git commit -m "Save Android v1.9 build result" || true
           git push || true
       - uses: actions/upload-artifact@v4
         if: steps.build_apk.outcome == 'success'
         with:
-          name: hanok-print-bridge-v1.8-apk
+          name: hanok-print-bridge-v1.9-apk
           path: android-print-bridge/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
       - name: Publish APK to repository
@@ -63,12 +63,12 @@ jobs:
         working-directory: .
         run: |
           mkdir -p releases
-          cp android-print-bridge/app/build/outputs/apk/debug/app-debug.apk releases/Hanok-Wagga-Print-Bridge-v1.8.apk
+          cp android-print-bridge/app/build/outputs/apk/debug/app-debug.apk releases/Hanok-Wagga-Print-Bridge-v1.9.apk
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase
-          git add releases/Hanok-Wagga-Print-Bridge-v1.8.apk
-          git commit -m "Publish Hanok Wagga Print Bridge v1.8 APK" || exit 0
+          git add releases/Hanok-Wagga-Print-Bridge-v1.9.apk
+          git commit -m "Publish Hanok Wagga Print Bridge v1.9 APK" || exit 0
           git push
       - name: Fail workflow if build failed
         if: steps.build_apk.outcome != 'success'
