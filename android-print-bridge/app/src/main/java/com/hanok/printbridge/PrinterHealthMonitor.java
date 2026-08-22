@@ -39,20 +39,24 @@ public final class PrinterHealthMonitor {
 
         String totalHost=prefs.getString("total_host",BridgeConfig.DEFAULT_TOTAL_IP);
         String splitHost=prefs.getString("split_host",BridgeConfig.DEFAULT_SPLIT_IP);
+        String barHost=prefs.getString("bar_host",BridgeConfig.DEFAULT_BAR_IP);
         int port=prefs.getInt("port",BridgeConfig.DEFAULT_PORT);
 
         Probe total=probe(totalHost,port);
         Probe split=probe(splitHost,port);
+        Probe bar=probe(barHost,port);
         long now=System.currentTimeMillis();
         prefs.edit()
             .putBoolean("total_printer_online",total.online)
             .putBoolean("split_printer_online",split.online)
+            .putBoolean("bar_printer_online",bar.online)
             .putInt("total_printer_latency_ms",total.latencyMs)
             .putInt("split_printer_latency_ms",split.latencyMs)
+            .putInt("bar_printer_latency_ms",bar.latencyMs)
             .putLong("printer_health_checked_at",now)
             .apply();
 
-        report(total,split,prefs);
+        report(total,split,bar,prefs);
     }
 
     private static Probe probe(String host,int port){
@@ -72,7 +76,7 @@ public final class PrinterHealthMonitor {
         }
     }
 
-    private static void report(Probe total,Probe split,SharedPreferences prefs){
+    private static void report(Probe total,Probe split,Probe bar,SharedPreferences prefs){
         HttpURLConnection c=null;
         try{
             c=(HttpURLConnection)new URL(BridgeConfig.BASE_URL+"/api/print/health").openConnection();
@@ -85,8 +89,10 @@ public final class PrinterHealthMonitor {
             c.setRequestProperty("x-print-secret",BridgeConfig.PRINT_SECRET);
             String json="{\"total_printer_online\":"+total.online+
                     ",\"split_printer_online\":"+split.online+
+                    ",\"bar_printer_online\":"+bar.online+
                     ",\"total_printer_latency_ms\":"+total.latencyMs+
-                    ",\"split_printer_latency_ms\":"+split.latencyMs+"}";
+                    ",\"split_printer_latency_ms\":"+split.latencyMs+
+                    ",\"bar_printer_latency_ms\":"+bar.latencyMs+"}";
             byte[] body=json.getBytes(StandardCharsets.UTF_8);
             try(OutputStream out=c.getOutputStream()){out.write(body);out.flush();}
             int code=c.getResponseCode();
