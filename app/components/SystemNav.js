@@ -10,7 +10,7 @@ export default function SystemNav(){
       const el=e.target?.closest?.('button,a');
       if(!el)return;
       const text=(el.textContent||'').trim().toLowerCase();
-      if(text==='logout' || text==='log out'){
+      if(text==='logout' || text==='log out' || text==='退出登录'){
         setTimeout(()=>{window.location.href='/';},180);
       }
     }
