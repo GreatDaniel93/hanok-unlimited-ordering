@@ -31,7 +31,10 @@ public final class PrinterHealthMonitor {
 
     private static void check(Context context){
         SharedPreferences prefs=context.getSharedPreferences(BridgeConfig.PREFS,Context.MODE_PRIVATE);
-        if(!prefs.getBoolean("enabled",false)||!prefs.getBoolean("service_alive",false))return;
+        if(!prefs.getBoolean("enabled",false))return;
+
+        DeviceHealthReporter.report(context);
+        if(!prefs.getBoolean("service_alive",false))return;
 
         String totalHost=prefs.getString("total_host",BridgeConfig.DEFAULT_TOTAL_IP);
         String splitHost=prefs.getString("split_host",BridgeConfig.DEFAULT_SPLIT_IP);
