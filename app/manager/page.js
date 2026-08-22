@@ -6,16 +6,6 @@ export default function ManagerDashboard(){
   const [message,setMessage]=useState('');
   const [bridge,setBridge]=useState({loading:true,auth:true,online:false,last_seen_at:null,seconds_ago:null,pending_print_orders:0,oldest_pending_seconds:0,queue_state:'healthy'});
   const [opening,setOpening]=useState({running:false,result:null,error:''});
-  const operations=[
-    ['Menu & Starter','Products, Standard / No Pork Starter and order settings.','/manager/menu'],
-    ['Table Management','Add, rename, set capacity, disable and restore tables.','/manager/tables'],
-    ['Table QR Codes','View and print QR codes for active tables.','/manager/qr']
-  ];
-  const control=[
-    ['Analytics & Reports','Historical operating data, date-range analysis and product/table performance.','/manager/analytics'],
-    ['Access & PIN Settings','Change Staff and Kitchen access PINs.','/manager/security']
-  ];
-  const Card=({item})=>{const[t,d,h]=item;return <a className="card dashboard-card" href={h}><div className="eyebrow">Manager</div><h2>{t}</h2><p className="muted" style={{marginBottom:0}}>{d}</p></a>};
 
   async function loadBridgeStatus(){
     try{
@@ -43,11 +33,16 @@ export default function ManagerDashboard(){
     const r=await fetch('/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pin})});
     const j=await r.json().catch(()=>({}));
     if(!r.ok||j.role!=='manager'){
-      if(r.ok) await fetch('/api/auth/logout',{method:'POST'});
+      if(r.ok)await fetch('/api/auth/logout',{method:'POST'});
       alert(j.error||'Manager PIN required.');
       return false;
     }
     return true;
+  }
+
+  async function logout(){
+    await fetch('/api/auth/logout',{method:'POST'}).catch(()=>{});
+    window.location.href='/';
   }
 
   async function checkBridge(){
@@ -86,7 +81,7 @@ export default function ManagerDashboard(){
     const j=await r.json().catch(()=>({}));
     setBusy('');
     if(!r.ok){setMessage(j.error||'Action failed.');return;}
-    setMessage(close ? `Closed ${j.sessions_closed||0} active table(s).` : `Cleared ${j.orders_cancelled||0} active kitchen order(s).`);
+    setMessage(close?`Closed ${j.sessions_closed||0} active table(s).`:`Cleared ${j.orders_cancelled||0} active kitchen order(s).`);
   }
 
   const totalKnown=Boolean(bridge.total_printer_checked_at);
@@ -95,59 +90,74 @@ export default function ManagerDashboard(){
   const queueWarning=bridge.queue_state==='warning';
   const systemReady=bridge.online&&bridge.total_printer_online&&bridge.split_printer_online&&!queueCritical&&!queueWarning;
   const systemAttention=bridge.online&&!systemReady;
-  const systemTitle=bridge.loading?'CHECKING PRINT SYSTEM…':!bridge.auth?'PRINT SYSTEM STATUS':systemReady?'● PRINT SYSTEM READY':systemAttention?'● PRINT SYSTEM ATTENTION':'● PRINT BRIDGE OFFLINE';
-  const systemText=!bridge.auth?'Manager login is required to view live print status.':bridge.loading?'Checking Android bridge, both LAN printers and print queue…':systemReady?'Cloud bridge and both printers are online. Kitchen printing is ready.':!bridge.online?(bridge.last_seen_at?`Bridge heartbeat stopped ${bridge.seconds_ago??'--'}s ago. Check the Android phone, Wi-Fi and Bridge service.`:'No bridge heartbeat received yet. Start the Android Print Bridge on the store phone.'):'Bridge is online, but one or more print components need attention.';
+  const systemTitle=bridge.loading?'CHECKING…':!bridge.auth?'SIGN IN REQUIRED':systemReady?'SYSTEM READY':systemAttention?'NEEDS ATTENTION':'BRIDGE OFFLINE';
   const systemColor=bridge.loading||!bridge.auth?'#8a6d3b':systemReady?'#247a47':systemAttention?'#b56b00':'#a12b2b';
-  const systemBg=bridge.loading||!bridge.auth?'#fff8e8':systemReady?'#eef8f1':systemAttention?'#fff7e6':'#fff0ef';
-  const tile=(title,state,detail,color)=> <div style={{background:'#fff',border:'1px solid #ddd7d0',borderRadius:12,padding:14,minHeight:98}}><div className="eyebrow">{title}</div><div style={{fontSize:17,fontWeight:900,color,marginTop:5}}>{state}</div><div className="muted" style={{fontSize:12,marginTop:5}}>{detail}</div></div>;
+  const systemText=!bridge.auth?'Manager login is required to view live print status.':bridge.loading?'Checking Android Bridge, printers and queue…':systemReady?'Bridge and both printers are online.':!bridge.online?(bridge.last_seen_at?`Bridge last seen ${bridge.seconds_ago??'--'}s ago.`:'No bridge heartbeat received yet.'):'Bridge is online, but one or more components need attention.';
 
   const bridgeState=bridge.online?'ONLINE':bridge.last_seen_at?'OFFLINE':'NOT SEEN';
   const bridgeDetail=bridge.online?`Heartbeat ${bridge.seconds_ago??0}s ago`:(bridge.last_seen_at?`Last seen ${bridge.seconds_ago??'--'}s ago`:'Waiting for first heartbeat');
   const totalState=!totalKnown?'NOT CHECKED':bridge.total_printer_online?'ONLINE':'OFFLINE';
   const splitState=!splitKnown?'NOT CHECKED':bridge.split_printer_online?'ONLINE':'OFFLINE';
-  const totalDetail=!totalKnown?'Install/start Bridge v1.6 to enable printer checks':`${bridge.total_printer_latency_ms??0}ms · checked ${bridge.total_printer_seconds_ago??0}s ago · 192.168.8.232`;
-  const splitDetail=!splitKnown?'Install/start Bridge v1.6 to enable printer checks':`${bridge.split_printer_latency_ms??0}ms · checked ${bridge.split_printer_seconds_ago??0}s ago · 192.168.8.231`;
+  const totalDetail=!totalKnown?'Start Bridge v1.7 to enable checks':`${bridge.total_printer_latency_ms??0}ms · ${bridge.total_printer_seconds_ago??0}s ago · .232`;
+  const splitDetail=!splitKnown?'Start Bridge v1.7 to enable checks':`${bridge.split_printer_latency_ms??0}ms · ${bridge.split_printer_seconds_ago??0}s ago · .231`;
   const queueState=queueCritical?'CRITICAL':queueWarning?'WARNING':'HEALTHY';
   const queueDetail=`${bridge.pending_print_orders||0} pending · oldest ${bridge.oldest_pending_seconds||0}s`;
 
+  const StatusTile=({title,state,detail,color})=><div className="status-tile"><div className="eyebrow">{title}</div><div className="state" style={{color}}>{state}</div><div className="detail">{detail}</div></div>;
   const openingResult=opening.result;
+  const openingTitle=opening.running?'CHECKING…':openingResult?(openingResult.ready?'READY FOR SERVICE':'NOT READY'):'NOT RUN YET';
   const openingColor=!openingResult?'#8a6d3b':openingResult.ready?'#247a47':'#a12b2b';
-  const openingBg=!openingResult?'#fff8e8':openingResult.ready?'#eef8f1':'#fff0ef';
 
-  return <><div className="topbar"><div className="logo">HANOK<small>WAGGA WAGGA · MANAGER</small></div></div><main className="page" style={{maxWidth:1080}}><section className="hero"><div style={{fontSize:12,fontWeight:900,letterSpacing:'.12em',color:'#e8cda0'}}>MANAGEMENT</div><h1 style={{fontSize:'clamp(30px,4vw,48px)',marginTop:8}}>Manager Dashboard</h1><p>Configuration, reporting and restaurant controls grouped in one place.</p></section>
-
-  <div className="section-title"><h2>System Health</h2><p>Live cloud bridge, printer and queue status.</p></div>
-  <div className="card" style={{border:`2px solid ${systemColor}`,background:systemBg}}>
-    <div className="actions" style={{alignItems:'center'}}><div><div className="eyebrow">Kitchen Printing</div><h2 style={{margin:'4px 0',color:systemColor}}>{systemTitle}</h2><p className="muted" style={{margin:0}}>{systemText}</p>{bridge.error&&<div className="error" style={{marginTop:10}}>{bridge.error}</div>}</div><div className="spacer"/><button className="btn secondary small" onClick={checkBridge} disabled={bridge.loading}>{bridge.auth?'CHECK NOW':'SIGN IN & CHECK'}</button></div>
-    {bridge.auth&&!bridge.loading&&<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:10,marginTop:16}}>
-      {tile('Android Bridge',bridgeState,bridgeDetail,bridge.online?'#247a47':'#a12b2b')}
-      {tile('Total Printer',totalState,totalDetail,totalKnown&&bridge.total_printer_online?'#247a47':totalKnown?'#a12b2b':'#8a6d3b')}
-      {tile('Split Printer',splitState,splitDetail,splitKnown&&bridge.split_printer_online?'#247a47':splitKnown?'#a12b2b':'#8a6d3b')}
-      {tile('Print Queue',queueState,queueDetail,queueCritical?'#a12b2b':queueWarning?'#b56b00':'#247a47')}
-    </div>}
-  </div>
-
-  <div className="section-title"><h2>Opening System Check</h2><p>Run once before service to verify the full ordering and printing chain.</p></div>
-  <div className="card" style={{border:`2px solid ${openingColor}`,background:openingBg}}>
-    <div className="actions" style={{alignItems:'center'}}>
-      <div><div className="eyebrow">Pre-Service Readiness</div><h2 style={{margin:'4px 0',color:openingColor}}>{opening.running?'RUNNING SYSTEM CHECK…':openingResult?(openingResult.ready?'✓ SYSTEM READY FOR SERVICE':'✕ SYSTEM NOT READY'):'RUN BEFORE OPENING'}</h2><p className="muted" style={{margin:0}}>{opening.running?'Checking cloud, database, Android Bridge, both printers, print queue, tables and menu…':openingResult?(openingResult.ready?'All required systems passed the opening check.':'One or more required systems failed. Fix the red item(s) before service.'):'This is a read-only check. It does not create orders or print test tickets.'}</p></div>
-      <div className="spacer"/><button className="btn secondary small" onClick={runOpeningCheck} disabled={opening.running}>{opening.running?'CHECKING…':'RUN OPENING CHECK'}</button>
+  return <>
+    <div className="topbar">
+      <div className="logo">HANOK<small>WAGGA WAGGA · MANAGER CONTROL</small></div><span className="spacer"/>
+      <a className="btn secondary small" href="/staff">Staff</a>
+      <a className="btn secondary small" href="/kitchen/meat">Meat KDS</a>
+      <a className="btn secondary small" href="/kitchen/hot">Hot KDS</a>
+      <a className="btn secondary small" href="/manager/qr">QR</a>
+      <button className="btn secondary small" onClick={logout}>Logout</button>
     </div>
-    {opening.error&&<div className="error" style={{marginTop:12}}>{opening.error}</div>}
-    {openingResult&&<>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:10,marginTop:16}}>
-        {(openingResult.checks||[]).map(c=>tile(c.label,c.ok?'PASS':'FAIL',c.detail,c.ok?'#247a47':'#a12b2b'))}
+
+    <main className="page">
+      <section className="hero"><h1>Manager Control</h1><p>Ordering rules, tables, system health, printing and performance.</p></section>
+
+      <div className="manager-tabs">
+        <button className="btn brand">OVERVIEW</button>
+        <a className="btn secondary" href="/manager/menu">MENU & STARTER</a>
+        <a className="btn secondary" href="/manager/tables">TABLES</a>
+        <a className="btn secondary" href="/manager/analytics">ANALYTICS</a>
+        <a className="btn secondary" href="/manager/security">SECURITY</a>
+        <a className="btn secondary" href="/manager/qr">QR CODES</a>
       </div>
-      <div className="muted" style={{fontSize:12,marginTop:12}}>Checked {openingResult.checked_at?new Date(openingResult.checked_at).toLocaleString():'now'} · API/DB response {openingResult.api_latency_ms??'--'}ms</div>
-    </>}
-  </div>
 
-  <div className="section-title"><h2>Quick Restaurant Controls</h2><p>Manager-only end-of-service and reset actions.</p></div>
-  <div className="grid grid-2">
-    <div className="card" style={{border:'1px solid #e2b3ad'}}><div className="eyebrow">Dining Room</div><h2>Close All Tables</h2><p className="muted">Immediately closes every active dining session. Tables become available again.</p><button className="btn danger" disabled={!!busy} onClick={()=>runBulk('close_all_tables')}>{busy==='close_all_tables'?'Closing…':'CLOSE ALL TABLES'}</button></div>
-    <div className="card" style={{border:'1px solid #e2b3ad'}}><div className="eyebrow">Kitchen Reset</div><h2>Clear All Current Orders</h2><p className="muted">Cancels all NEW / PREPARING / READY tickets on both KDS screens without deleting historical reporting data.</p><button className="btn danger" disabled={!!busy} onClick={()=>runBulk('clear_all_orders')}>{busy==='clear_all_orders'?'Clearing…':'CLEAR ALL ORDERS'}</button></div>
-  </div>
-  {message&&<div className="notice" style={{marginTop:14}}>{message}</div>}
+      {message&&<div className="notice" style={{marginTop:12}}>{message}</div>}
 
-  <div className="section-title"><h2>Operations & Menu</h2><p>Daily configuration and table setup.</p></div><div className="grid grid-3">{operations.map((x)=><Card key={x[2]} item={x}/>)}</div><div className="section-title"><h2>Reports & System</h2><p>Performance data and access control.</p></div><div className="grid grid-2">{control.map((x)=><Card key={x[2]} item={x}/>)}</div></main></>;
+      <div className="manager-overview-grid">
+        <div className="card manager-section-card">
+          <div className="actions"><div><div className="eyebrow">Kitchen Printing</div><h2 style={{color:systemColor}}>{systemTitle}</h2><p className="muted">{systemText}</p></div><span className="spacer"/><button className="btn secondary small" onClick={checkBridge} disabled={bridge.loading}>{bridge.auth?'CHECK NOW':'SIGN IN'}</button></div>
+          {bridge.error&&<div className="error" style={{marginTop:10}}>{bridge.error}</div>}
+          {bridge.auth&&!bridge.loading&&<div className="status-grid">
+            <StatusTile title="Android Bridge" state={bridgeState} detail={bridgeDetail} color={bridge.online?'#247a47':'#a12b2b'}/>
+            <StatusTile title="Total Printer" state={totalState} detail={totalDetail} color={totalKnown&&bridge.total_printer_online?'#247a47':totalKnown?'#a12b2b':'#8a6d3b'}/>
+            <StatusTile title="Split Printer" state={splitState} detail={splitDetail} color={splitKnown&&bridge.split_printer_online?'#247a47':splitKnown?'#a12b2b':'#8a6d3b'}/>
+            <StatusTile title="Print Queue" state={queueState} detail={queueDetail} color={queueCritical?'#a12b2b':queueWarning?'#b56b00':'#247a47'}/>
+          </div>}
+        </div>
+
+        <div className="card manager-section-card">
+          <div className="actions"><div><div className="eyebrow">Pre-Service Readiness</div><h2 style={{color:openingColor}}>{openingTitle}</h2><p className="muted">One read-only check for cloud, database, Bridge, printers, queue, tables and menu.</p></div><span className="spacer"/><button className="btn brand small" onClick={runOpeningCheck} disabled={opening.running}>{opening.running?'CHECKING…':'RUN OPENING CHECK'}</button></div>
+          {opening.error&&<div className="error" style={{marginTop:10}}>{opening.error}</div>}
+          {openingResult?<div className="status-grid">
+            {(openingResult.checks||[]).map(c=><StatusTile key={c.label} title={c.label} state={c.ok?'PASS':'FAIL'} detail={c.detail} color={c.ok?'#247a47':'#a12b2b'}/>) }
+          </div>:<div className="notice" style={{marginTop:14}}>Run this once before service. It does not create orders or print test tickets.</div>}
+        </div>
+      </div>
+
+      <div className="section-title"><h2>Quick Controls</h2><p>End-of-service and emergency reset actions.</p></div>
+      <div className="grid grid-2">
+        <div className="card"><div className="eyebrow">Dining Room</div><h2>Close All Tables</h2><p className="muted">Ends every active dining session and makes tables available again.</p><button className="btn danger" disabled={!!busy} onClick={()=>runBulk('close_all_tables')}>{busy==='close_all_tables'?'CLOSING…':'CLOSE ALL TABLES'}</button></div>
+        <div className="card"><div className="eyebrow">Kitchen Reset</div><h2>Clear Current Orders</h2><p className="muted">Cancels NEW / PREPARING / READY tickets while preserving history and analytics.</p><button className="btn danger" disabled={!!busy} onClick={()=>runBulk('clear_all_orders')}>{busy==='clear_all_orders'?'CLEARING…':'CLEAR ALL ORDERS'}</button></div>
+      </div>
+    </main>
+  </>;
 }
