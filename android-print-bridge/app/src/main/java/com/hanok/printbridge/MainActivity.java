@@ -84,14 +84,14 @@ public class MainActivity extends Activity {
 
         section(root,"ALWAYS-ON PROTECTION");
         LinearLayout bg=card(); bg.setPadding(dp(16),dp(14),dp(16),dp(14));
-        backgroundState=text("Checking battery settings…",14,true,ink); bg.addView(backgroundState);
-        TextView bgHelp=text("v1.5 uses a foreground service, CPU wake lock, Wi-Fi performance lock, network reconnect detection, adaptive polling and automatic service restart. Enable unrestricted battery operation for maximum reliability while the screen is off.",12,false,Color.DKGRAY); bgHelp.setPadding(0,dp(4),0,dp(8)); bg.addView(bgHelp);
-        Button allow=secondaryButton("ALLOW BACKGROUND RUNNING"); bg.addView(allow); root.addView(bg);
+        backgroundState=text("Checking always-on protection…",14,true,ink); bg.addView(backgroundState);
+        TextView bgHelp=text("v1.8 uses a foreground service, CPU wake lock, Wi-Fi performance lock, adaptive reconnect and a dead-man watchdog alarm. Battery optimization must be disabled for this app; exact alarm access makes screen-off recovery faster on aggressive Android phones.",12,false,Color.DKGRAY); bgHelp.setPadding(0,dp(4),0,dp(8)); bg.addView(bgHelp);
+        Button allow=secondaryButton("ENABLE ALWAYS-ON PROTECTION"); bg.addView(allow); root.addView(bg);
 
         start=primaryButton("START BRIDGE"); root.addView(start);
         stop=secondaryButton("STOP BRIDGE"); LinearLayout.LayoutParams slp=(LinearLayout.LayoutParams)stop.getLayoutParams(); slp.setMargins(0,dp(10),0,0); stop.setLayoutParams(slp); root.addView(stop);
 
-        TextView footer=text("v1.5 · orderhanokbbqwagga.com · ESC/POS · TCP 9100 · access key embedded",11,false,Color.GRAY); footer.setGravity(Gravity.CENTER); footer.setPadding(0,dp(18),0,0); root.addView(footer);
+        TextView footer=text("v1.8 · orderhanokbbqwagga.com · ESC/POS · TCP 9100",11,false,Color.GRAY); footer.setGravity(Gravity.CENTER); footer.setPadding(0,dp(18),0,0); root.addView(footer);
         setContentView(sv);
 
         t1.setOnClickListener(v->test(1)); t2.setOnClickListener(v->test(2)); tb.setOnClickListener(v->{test(1);test(2);});
@@ -99,20 +99,37 @@ public class MainActivity extends Activity {
         updateBackgroundState();
     }
 
+    private boolean batteryProtectionOk(){
+        if(Build.VERSION.SDK_INT<23)return true;
+        PowerManager pm=(PowerManager)getSystemService(POWER_SERVICE);
+        return pm!=null&&pm.isIgnoringBatteryOptimizations(getPackageName());
+    }
+
     private void requestBackgroundAccess(){
         try{
-            if(Build.VERSION.SDK_INT>=23){
-                Intent i=new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:"+getPackageName())); startActivity(i);
-            } else toast("Background protection is not required on this Android version.");
+            if(Build.VERSION.SDK_INT>=23&&!batteryProtectionOk()){
+                startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,Uri.parse("package:"+getPackageName())));
+                return;
+            }
+            if(Build.VERSION.SDK_INT>=31&&!BridgeWatchdog.exactAlarmAllowed(this)){
+                startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:"+getPackageName())));
+                return;
+            }
+            toast("Always-on protection is enabled.");
         }catch(Exception e){
             try{startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+getPackageName())));}catch(Exception ignored){}
         }
     }
 
     private void updateBackgroundState(){
-        boolean ok=true;
-        if(Build.VERSION.SDK_INT>=23){PowerManager pm=(PowerManager)getSystemService(POWER_SERVICE);ok=pm!=null&&pm.isIgnoringBatteryOptimizations(getPackageName());}
-        if(backgroundState!=null){backgroundState.setText(ok?"✓ Background battery protection enabled":"⚠ Tap below to allow unrestricted background running");backgroundState.setTextColor(ok?Color.rgb(42,120,72):Color.rgb(176,105,20));}
+        boolean batteryOk=batteryProtectionOk();
+        boolean alarmOk=BridgeWatchdog.exactAlarmAllowed(this);
+        boolean ok=batteryOk&&alarmOk;
+        if(backgroundState!=null){
+            String text=(batteryOk?"Battery unrestricted ✓":"Battery restriction ⚠")+" · "+(alarmOk?"Watchdog alarm ✓":"Watchdog alarm ⚠");
+            backgroundState.setText(text);
+            backgroundState.setTextColor(ok?Color.rgb(42,120,72):Color.rgb(176,105,20));
+        }
     }
 
     private void startBridge(){
@@ -120,6 +137,7 @@ public class MainActivity extends Activity {
             save();
             getSharedPreferences(BridgeConfig.PREFS,MODE_PRIVATE).edit().putBoolean("enabled",true).putBoolean("service_alive",false).putString("status","Starting...").apply();
             startBridgeService();
+            BridgeWatchdog.forceArm(this);
         }catch(Exception e){
             getSharedPreferences(BridgeConfig.PREFS,MODE_PRIVATE).edit().putBoolean("enabled",false).putBoolean("service_alive",false).putString("status","Start failed: "+e.getMessage()).apply(); toast("Start failed: "+e.getMessage());
         }
@@ -138,11 +156,12 @@ public class MainActivity extends Activity {
         if(!stale)return;
         if(!force&&now-lastRecoveryAttempt<30000L)return;
         lastRecoveryAttempt=now;
-        try{startBridgeService();}catch(Throwable ignored){}
+        try{startBridgeService();BridgeWatchdog.forceArm(this);}catch(Throwable ignored){}
     }
 
     private void stopBridge(){
         try{Intent i=new Intent(this,BridgeService.class);i.setAction(BridgeService.ACTION_STOP);if(Build.VERSION.SDK_INT>=26)startForegroundService(i);else startService(i);}catch(Exception e){stopService(new Intent(this,BridgeService.class));}
+        BridgeWatchdog.cancel(this);
         toast("Bridge stopped");
     }
 
