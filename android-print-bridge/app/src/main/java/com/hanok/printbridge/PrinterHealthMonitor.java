@@ -33,6 +33,7 @@ public final class PrinterHealthMonitor {
         SharedPreferences prefs=context.getSharedPreferences(BridgeConfig.PREFS,Context.MODE_PRIVATE);
         if(!prefs.getBoolean("enabled",false))return;
 
+        BridgeWatchdog.arm(context);
         DeviceHealthReporter.report(context);
         if(!prefs.getBoolean("service_alive",false))return;
 
