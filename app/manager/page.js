@@ -7,6 +7,7 @@ export default function ManagerDashboard(){
   const [bridge,setBridge]=useState({loading:true,auth:true,online:false,last_seen_at:null,seconds_ago:null,pending_print_orders:0,oldest_pending_seconds:0,queue_state:'healthy'});
   const [opening,setOpening]=useState({running:false,result:null,error:''});
   const [helpOpen,setHelpOpen]=useState('');
+  const [helpZh,setHelpZh]=useState(false);
 
   async function loadBridgeStatus(){
     try{
@@ -26,6 +27,14 @@ export default function ManagerDashboard(){
     document.addEventListener('visibilitychange',refresh);
     window.addEventListener('focus',refresh);
     return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',refresh);window.removeEventListener('focus',refresh);};
+  },[]);
+
+  useEffect(()=>{
+    const sync=()=>setHelpZh(String(document.documentElement.lang||'en').toLowerCase().startsWith('zh'));
+    sync();
+    const observer=new MutationObserver(sync);
+    observer.observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
+    return()=>observer.disconnect();
   },[]);
 
   async function managerLogin(){
@@ -85,10 +94,11 @@ export default function ManagerDashboard(){
   const barDetail=!barKnown?'Install/start Bridge v1.9 to enable checks':`${bridge.bar_printer_latency_ms??0}ms · ${bridge.bar_printer_seconds_ago??0}s ago · .230`;
   const queueState=queueCritical?'CRITICAL':queueWarning?'WARNING':'HEALTHY';
   const queueDetail=`${bridge.pending_print_orders||0} pending · oldest ${bridge.oldest_pending_seconds||0}s`;
+  const L=(en,zh)=>helpZh?zh:en;
 
   const StatusTile=({title,state,detail,color})=><div className="status-tile"><div className="eyebrow">{title}</div><div className="state" style={{color}}>{state}</div><div className="detail">{detail}</div></div>;
-  const HelpButton=({kind})=><button className="btn secondary small" aria-label="Help / Troubleshooting" title="Help / Troubleshooting" onClick={()=>setHelpOpen(helpOpen===kind?'':kind)} style={{width:28,height:28,minWidth:28,borderRadius:999,padding:0,fontSize:16,lineHeight:1}}>?</button>;
-  const TroubleshootingBox=({children})=><div className="notice" style={{marginTop:12,background:'#fff9ec'}}><div className="actions" style={{marginBottom:8}}><b>Troubleshooting</b><span className="spacer"/><button className="btn secondary small" onClick={()=>setHelpOpen('')}>Close</button></div>{children}</div>;
+  const HelpButton=({kind})=><button className="btn secondary small" aria-label={L('Help / Troubleshooting','帮助 / 故障处理')} title={L('Help / Troubleshooting','帮助 / 故障处理')} onClick={()=>setHelpOpen(helpOpen===kind?'':kind)} style={{width:28,height:28,minWidth:28,borderRadius:999,padding:0,fontSize:16,lineHeight:1}}>?</button>;
+  const TroubleshootingBox=({children})=><div className="notice" data-no-translate style={{marginTop:12,background:'#fff9ec'}}><div className="actions" style={{marginBottom:8}}><b>{L('Troubleshooting','故障处理')}</b><span className="spacer"/><button className="btn secondary small" onClick={()=>setHelpOpen('')}>{L('Close','关闭')}</button></div>{children}</div>;
   const Step=({title,children})=><div style={{padding:'8px 0',borderTop:'1px solid rgba(100,70,30,.12)'}}><b>{title}</b><div style={{marginTop:4,lineHeight:1.45,fontSize:13}}>{children}</div></div>;
 
   const openingResult=opening.result;
@@ -109,15 +119,15 @@ export default function ManagerDashboard(){
         <div className="card manager-section-card">
           <div className="actions"><div><div className="actions" style={{gap:7}}><div className="eyebrow">Kitchen Printing</div><HelpButton kind="printing"/></div><h2 style={{color:systemColor}}>{systemTitle}</h2><p className="muted">{systemText}</p></div><span className="spacer"/><button className="btn secondary small" onClick={checkBridge} disabled={bridge.loading}>{bridge.auth?'CHECK NOW':'SIGN IN'}</button></div>
           {helpOpen==='printing'&&<TroubleshootingBox>
-            {!bridge.auth&&<Step title="Manager login required">Sign in with the Manager PIN, then press CHECK NOW again.</Step>}
-            {bridge.auth&&!bridge.loading&&systemReady&&<Step title="System is healthy">No action is required. Keep the Bridge phone connected to power, on store Wi-Fi, with Bridge v1.9 running.</Step>}
-            {bridge.auth&&!bridge.loading&&!bridge.online&&<Step title="Android Bridge is offline">Go to the dedicated Bridge phone. Confirm it is charging, connected to the store Wi-Fi, the screen is kept awake, and Hanok Wagga Print Bridge v1.9 is open. Press START BRIDGE. Do not Force Stop the app.</Step>}
-            {bridge.auth&&!bridge.loading&&(!totalKnown||!splitKnown||!barKnown)&&<Step title="Printer status says NOT CHECKED">Confirm Bridge v1.9 is installed and START BRIDGE is running. Wait up to 30 seconds, then press CHECK NOW.</Step>}
-            {bridge.auth&&!bridge.loading&&totalKnown&&!bridge.total_printer_online&&<Step title="Total Printer is offline">Check the TOTAL printer is powered on, has paper, and its Ethernet cable is connected. Its IP must be 192.168.8.232. On the Bridge phone use TEST P1, then press CHECK NOW.</Step>}
-            {bridge.auth&&!bridge.loading&&splitKnown&&!bridge.split_printer_online&&<Step title="Split Printer is offline">Check the SPLIT printer is powered on, has paper, and its Ethernet cable is connected. Its IP must be 192.168.8.231. On the Bridge phone use TEST P2, then press CHECK NOW.</Step>}
-            {bridge.auth&&!bridge.loading&&barKnown&&!bridge.bar_printer_online&&<Step title="Bar Rice Printer is offline">Check the BAR RICE printer is powered on, has paper, and its Ethernet cable is connected. Its IP must be 192.168.8.230. On the Bridge phone use TEST BAR, then press CHECK NOW.</Step>}
-            {bridge.auth&&!bridge.loading&&(queueWarning||queueCritical)&&<Step title="Print Queue is delayed">Do not submit the same customer order again. First restore any offline Bridge or printer. The queue will retry automatically. When all printers are online, wait 10–20 seconds and press CHECK NOW. Use CLEAR ALL ORDERS only when you intentionally want to cancel active kitchen orders.</Step>}
-            {bridge.error&&<Step title="Manager status cannot be loaded">Check internet access on the Manager device and reload the page. If customer QR ordering is also unavailable, do not rely on the ordering system until connectivity is restored.</Step>}
+            {!bridge.auth&&<Step title={L('Manager login required','需要经理登录')}>{L('Sign in with the Manager PIN, then press CHECK NOW again.','使用经理 PIN 登录，然后再次点击“立即检查”。')}</Step>}
+            {bridge.auth&&!bridge.loading&&systemReady&&<Step title={L('System is healthy','系统正常')}>{L('No action is required. Keep the Bridge phone connected to power, on store Wi-Fi, with Bridge v1.9 running.','无需处理。保持 Bridge 手机持续供电、连接店内 Wi-Fi，并确保 Bridge v1.9 正在运行。')}</Step>}
+            {bridge.auth&&!bridge.loading&&!bridge.online&&<Step title={L('Android Bridge is offline','Android Bridge 离线')}>{L('Go to the dedicated Bridge phone. Confirm it is charging, connected to the store Wi-Fi, the screen is kept awake, and Hanok Wagga Print Bridge v1.9 is open. Press START BRIDGE. Do not Force Stop the app.','到专用 Bridge 手机检查：手机正在充电、已连接店内 Wi-Fi、屏幕保持常亮，并且 Hanok Wagga Print Bridge v1.9 已打开。点击 START BRIDGE。不要对 App 使用“强制停止”。')}</Step>}
+            {bridge.auth&&!bridge.loading&&(!totalKnown||!splitKnown||!barKnown)&&<Step title={L('Printer status says NOT CHECKED','打印机显示“未检查”')}>{L('Confirm Bridge v1.9 is installed and START BRIDGE is running. Wait up to 30 seconds, then press CHECK NOW.','确认已经安装 Bridge v1.9 并且 START BRIDGE 正在运行。等待最多 30 秒，然后点击“立即检查”。')}</Step>}
+            {bridge.auth&&!bridge.loading&&totalKnown&&!bridge.total_printer_online&&<Step title={L('Total Printer is offline','总单打印机离线')}>{L('Check the TOTAL printer is powered on, has paper, and its Ethernet cable is connected. Its IP must be 192.168.8.232. On the Bridge phone use TEST P1, then press CHECK NOW.','检查 TOTAL 打印机已开机、有纸、网线已连接。IP 必须是 192.168.8.232。在 Bridge 手机上点击 TEST P1，测试成功后再点“立即检查”。')}</Step>}
+            {bridge.auth&&!bridge.loading&&splitKnown&&!bridge.split_printer_online&&<Step title={L('Split Printer is offline','分单打印机离线')}>{L('Check the SPLIT printer is powered on, has paper, and its Ethernet cable is connected. Its IP must be 192.168.8.231. On the Bridge phone use TEST P2, then press CHECK NOW.','检查 SPLIT 打印机已开机、有纸、网线已连接。IP 必须是 192.168.8.231。在 Bridge 手机上点击 TEST P2，测试成功后再点“立即检查”。')}</Step>}
+            {bridge.auth&&!bridge.loading&&barKnown&&!bridge.bar_printer_online&&<Step title={L('Bar Rice Printer is offline','吧台米饭打印机离线')}>{L('Check the BAR RICE printer is powered on, has paper, and its Ethernet cable is connected. Its IP must be 192.168.8.230. On the Bridge phone use TEST BAR, then press CHECK NOW.','检查 BAR RICE 打印机已开机、有纸、网线已连接。IP 必须是 192.168.8.230。在 Bridge 手机上点击 TEST BAR，测试成功后再点“立即检查”。')}</Step>}
+            {bridge.auth&&!bridge.loading&&(queueWarning||queueCritical)&&<Step title={L('Print Queue is delayed','打印队列积压')}>{L('Do not submit the same customer order again. First restore any offline Bridge or printer. The queue will retry automatically. When all printers are online, wait 10–20 seconds and press CHECK NOW. Use CLEAR ALL ORDERS only when you intentionally want to cancel active kitchen orders.','不要重复提交同一张顾客订单。先恢复离线的 Bridge 或打印机，系统会自动重试。所有打印机恢复在线后等待 10–20 秒，再点“立即检查”。只有在你明确要取消当前厨房订单时才使用 CLEAR ALL ORDERS。')}</Step>}
+            {bridge.error&&<Step title={L('Manager status cannot be loaded','无法读取后台状态')}>{L('Check internet access on the Manager device and reload the page. If customer QR ordering is also unavailable, do not rely on the ordering system until connectivity is restored.','检查 Manager 设备的网络并刷新页面。如果顾客扫码点餐页面也无法使用，在网络恢复前不要依赖该点餐系统。')}</Step>}
           </TroubleshootingBox>}
           {bridge.error&&<div className="error" style={{marginTop:10}}>{bridge.error}</div>}
           {bridge.auth&&!bridge.loading&&<div className="status-grid">
@@ -131,17 +141,17 @@ export default function ManagerDashboard(){
         <div className="card manager-section-card">
           <div className="actions"><div><div className="actions" style={{gap:7}}><div className="eyebrow">Pre-Service Readiness</div><HelpButton kind="opening"/></div><h2 style={{color:openingColor}}>{openingTitle}</h2><p className="muted">One read-only check for cloud, database, Bridge, all printers, queue, tables and menu.</p></div><span className="spacer"/><button className="btn brand small" onClick={runOpeningCheck} disabled={opening.running}>{opening.running?'CHECKING…':'RUN OPENING CHECK'}</button></div>
           {helpOpen==='opening'&&<TroubleshootingBox>
-            {!openingResult&&!opening.error&&<Step title="Before opening">Press RUN OPENING CHECK. If every item shows PASS, the system is ready. If any item shows FAIL, follow the matching instruction below and run the check again.</Step>}
-            {openingResult?.ready&&<Step title="All checks passed">No corrective action is required. Keep the Bridge phone powered and leave all three printers on.</Step>}
-            {failedOpeningKeys.has('cloud_db')&&<Step title="Cloud & Database failed">Confirm the Manager device and Bridge phone both have internet access. Reload the Manager page and run the check again. If the customer QR page is also unavailable, do not open QR ordering until service is restored.</Step>}
-            {failedOpeningKeys.has('bridge')&&<Step title="Android Bridge failed">On the Bridge phone confirm power, store Wi-Fi and Bridge v1.9. Open the app and press START BRIDGE, then wait about 10 seconds and run the opening check again.</Step>}
-            {failedOpeningKeys.has('total_printer')&&<Step title="Total Printer failed">Power on the TOTAL printer, confirm paper and Ethernet, and verify IP 192.168.8.232. Use TEST P1 on the Bridge phone. Run the opening check again after the test succeeds.</Step>}
-            {failedOpeningKeys.has('split_printer')&&<Step title="Split Printer failed">Power on the SPLIT printer, confirm paper and Ethernet, and verify IP 192.168.8.231. Use TEST P2 on the Bridge phone. Run the opening check again after the test succeeds.</Step>}
-            {failedOpeningKeys.has('bar_printer')&&<Step title="Bar Rice Printer failed">Power on the BAR RICE printer, confirm paper and Ethernet, and verify IP 192.168.8.230. Use TEST BAR on the Bridge phone. Run the opening check again after the test succeeds.</Step>}
-            {failedOpeningKeys.has('print_queue')&&<Step title="Print Queue failed">Do not place duplicate test orders. Restore the Bridge and any offline printers first. Wait for pending tickets to clear automatically, then run the opening check again. Only use CLEAR ALL ORDERS if those active orders should truly be cancelled.</Step>}
-            {failedOpeningKeys.has('tables')&&<Step title="Dining Tables failed">Open Manager → TABLES and make sure at least one dining table is ACTIVE. Restore or add the required tables, then run the opening check again.</Step>}
-            {failedOpeningKeys.has('menu')&&<Step title="Ordering Menu failed">Open Manager → MENU & STARTER → PRODUCTS. Confirm at least one BBQ Meat item and at least one Hot Dish item are ACTIVE, then run the opening check again.</Step>}
-            {opening.error&&<Step title="Opening check could not run">Check internet access, reload the Manager page, sign in again if required, then retry RUN OPENING CHECK.</Step>}
+            {!openingResult&&!opening.error&&<Step title={L('Before opening','开店前')}>{L('Press RUN OPENING CHECK. If every item shows PASS, the system is ready. If any item shows FAIL, follow the matching instruction below and run the check again.','点击 RUN OPENING CHECK。如果所有项目都是 PASS，系统即可营业。如果有任何 FAIL，按照对应项目的处理方法操作，然后重新运行检查。')}</Step>}
+            {openingResult?.ready&&<Step title={L('All checks passed','全部检查通过')}>{L('No corrective action is required. Keep the Bridge phone powered and leave all three printers on.','无需处理。保持 Bridge 手机持续供电，并保持三台打印机开机。')}</Step>}
+            {failedOpeningKeys.has('cloud_db')&&<Step title={L('Cloud & Database failed','Cloud & Database 未通过')}>{L('Confirm the Manager device and Bridge phone both have internet access. Reload the Manager page and run the check again. If the customer QR page is also unavailable, do not open QR ordering until service is restored.','确认 Manager 设备和 Bridge 手机都可以正常上网。刷新 Manager 页面后重新运行检查。如果顾客二维码页面也打不开，在服务恢复前不要开启扫码点餐。')}</Step>}
+            {failedOpeningKeys.has('bridge')&&<Step title={L('Android Bridge failed','Android Bridge 未通过')}>{L('On the Bridge phone confirm power, store Wi-Fi and Bridge v1.9. Open the app and press START BRIDGE, then wait about 10 seconds and run the opening check again.','在 Bridge 手机上确认供电、店内 Wi-Fi 和 Bridge v1.9。打开 App 点击 START BRIDGE，等待约 10 秒后重新运行开店检查。')}</Step>}
+            {failedOpeningKeys.has('total_printer')&&<Step title={L('Total Printer failed','总单打印机未通过')}>{L('Power on the TOTAL printer, confirm paper and Ethernet, and verify IP 192.168.8.232. Use TEST P1 on the Bridge phone. Run the opening check again after the test succeeds.','打开 TOTAL 打印机，检查纸张和网线，并确认 IP 为 192.168.8.232。在 Bridge 手机上点击 TEST P1，测试成功后重新运行开店检查。')}</Step>}
+            {failedOpeningKeys.has('split_printer')&&<Step title={L('Split Printer failed','分单打印机未通过')}>{L('Power on the SPLIT printer, confirm paper and Ethernet, and verify IP 192.168.8.231. Use TEST P2 on the Bridge phone. Run the opening check again after the test succeeds.','打开 SPLIT 打印机，检查纸张和网线，并确认 IP 为 192.168.8.231。在 Bridge 手机上点击 TEST P2，测试成功后重新运行开店检查。')}</Step>}
+            {failedOpeningKeys.has('bar_printer')&&<Step title={L('Bar Rice Printer failed','吧台米饭打印机未通过')}>{L('Power on the BAR RICE printer, confirm paper and Ethernet, and verify IP 192.168.8.230. Use TEST BAR on the Bridge phone. Run the opening check again after the test succeeds.','打开 BAR RICE 打印机，检查纸张和网线，并确认 IP 为 192.168.8.230。在 Bridge 手机上点击 TEST BAR，测试成功后重新运行开店检查。')}</Step>}
+            {failedOpeningKeys.has('print_queue')&&<Step title={L('Print Queue failed','打印队列未通过')}>{L('Do not place duplicate test orders. Restore the Bridge and any offline printers first. Wait for pending tickets to clear automatically, then run the opening check again. Only use CLEAR ALL ORDERS if those active orders should truly be cancelled.','不要重复下测试单。先恢复 Bridge 和所有离线打印机，等待待打印订单自动清空，再重新运行开店检查。只有确实需要取消这些当前订单时才使用 CLEAR ALL ORDERS。')}</Step>}
+            {failedOpeningKeys.has('tables')&&<Step title={L('Dining Tables failed','桌台检查未通过')}>{L('Open Manager → TABLES and make sure at least one dining table is ACTIVE. Restore or add the required tables, then run the opening check again.','进入 Manager → TABLES，确认至少有一张桌台处于 ACTIVE。恢复或新增所需桌台后，再重新运行开店检查。')}</Step>}
+            {failedOpeningKeys.has('menu')&&<Step title={L('Ordering Menu failed','点餐菜单未通过')}>{L('Open Manager → MENU & STARTER → PRODUCTS. Confirm at least one BBQ Meat item and at least one Hot Dish item are ACTIVE, then run the opening check again.','进入 Manager → MENU & STARTER → PRODUCTS，确认至少有一个 BBQ Meat 和一个 Hot Dish 处于 ACTIVE，然后重新运行开店检查。')}</Step>}
+            {opening.error&&<Step title={L('Opening check could not run','开店检查无法运行')}>{L('Check internet access, reload the Manager page, sign in again if required, then retry RUN OPENING CHECK.','检查网络，刷新 Manager 页面，如有需要重新登录，然后再次运行 RUN OPENING CHECK。')}</Step>}
           </TroubleshootingBox>}
           {opening.error&&<div className="error" style={{marginTop:10}}>{opening.error}</div>}
           {openingResult?<div className="status-grid">{(openingResult.checks||[]).map(c=><StatusTile key={c.label} title={c.label} state={c.ok?'PASS':'FAIL'} detail={c.detail} color={c.ok?'#247a47':'#a12b2b'}/>)}</div>:<div className="notice" style={{marginTop:14}}>Run this once before service. It does not create orders or print test tickets.</div>}
