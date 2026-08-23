@@ -22,5 +22,6 @@ export default function SystemNav(){
   return <div className="system-nav">
     <a href="/" className="system-nav-link">← System Home</a>
     {inManager && path!=='/manager' && <a href="/manager" className="system-nav-link secondary-link">Manager Home</a>}
+    {inManager && path!=='/manager/feedback' && <a href="/manager/feedback" className="system-nav-link secondary-link">Feedback / 问卷</a>}
   </div>;
 }
