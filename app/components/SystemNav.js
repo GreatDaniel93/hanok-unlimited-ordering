@@ -17,7 +17,7 @@ export default function SystemNav(){
     document.addEventListener('click',onClick,true);
     return()=>document.removeEventListener('click',onClick,true);
   },[]);
-  if(path==='/' || path.startsWith('/t/')) return null;
+  if(path==='/' || path==='/feedback' || path.startsWith('/t/')) return null;
   const inManager=path==='/manager' || path.startsWith('/manager/');
   return <div className="system-nav">
     <a href="/" className="system-nav-link">← System Home</a>
