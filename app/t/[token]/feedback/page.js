@@ -36,7 +36,7 @@ export default function FeedbackPage(){
     setBusy(true);setError('');
     try{
       const payload=(data?.questions||[]).filter(q=>answered(q)).map(q=>({question_id:q.id,answer:answers[q.id]}));
-      const r=await fetch('/api/customer/feedback',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token,session_id:sessionId||null,answers:payload})});
+      const r=await fetch('/api/customer/feedback',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token,session_id:sessionId||data?.session?.id||null,answers:payload})});
       const j=await r.json().catch(()=>({}));
       if(!r.ok)throw new Error(j.error||'Unable to submit feedback.');
       setDone(true);window.scrollTo({top:0,behavior:'smooth'});
