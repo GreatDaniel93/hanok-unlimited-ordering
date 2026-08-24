@@ -51,6 +51,7 @@ export default function CustomerPage() {
 
   const session=data?.session;
   const isLunch=session?.service_mode==='lunch';
+  const noStarter=!isLunch&&session?.starter_preference==='none';
   useEffect(()=>{if(isLunch&&category==='meat')setCategory('hot');},[isLunch,category]);
   const menu=useMemo(()=>data?.menu?.filter(x=>x.category===category)||[],[data,category]);
   const meatCount=Object.entries(cart).reduce((n,[id,q])=>n+(data?.menu?.find(x=>x.id===id)?.category==='meat'?q:0),0);
@@ -107,7 +108,7 @@ export default function CustomerPage() {
           <div className="actions" style={{marginTop:14}}><span className="badge new">{data.table.name}</span>{session&&<span className="badge new">{session.total_guests} Guests</span>}<span className="spacer"/><b style={{fontSize:28}}>{session?formatTime(remaining):'--:--'}</b></div>
         </section>
         {!session ? <div className="notice" style={{marginTop:14}}><b>Your table is not active yet.</b><br/>Please wait for our team to start your dining session.</div> : <>
-          {isLunch?<div className="notice" style={{marginTop:14}}><b>Weekday Lunch Buffet · Monday–Friday</b><br/>60-minute dining session. Order up to <b>{lunchItemsPerGuest} items per guest, per round</b>. A new round opens every <b>{lunchCooldownMinutes} minutes</b>. The same dish is limited to <b>{lunchSameItemMax} portions per round</b>. BBQ meats are not included. Last order closes <b>{lunchLastOrderMinutes} minutes before finish</b>.</div>:<div className="notice" style={{marginTop:14}}><b>Hanok First Grill Selection</b><br/>Your starter platter has been sent to the meat station. Side dishes and desserts are self-service.</div>}
+          {isLunch?<div className="notice" style={{marginTop:14}}><b>Weekday Lunch Buffet · Monday–Friday</b><br/>60-minute dining session. Order up to <b>{lunchItemsPerGuest} items per guest, per round</b>. A new round opens every <b>{lunchCooldownMinutes} minutes</b>. The same dish is limited to <b>{lunchSameItemMax} portions per round</b>. BBQ meats are not included. Last order closes <b>{lunchLastOrderMinutes} minutes before finish</b>.</div>:noStarter?<div className="notice" style={{marginTop:14}}><b>Choose Your Own First Grill</b><br/>No Starter Platter has been sent. You can choose your BBQ meats directly below. The normal meat-per-round limit applies, and the cooldown starts after each meat order. Side dishes and desserts are self-service.</div>:<div className="notice" style={{marginTop:14}}><b>Hanok First Grill Selection</b><br/>Your starter platter has been sent to the meat station. Side dishes and desserts are self-service.</div>}
           {lastOrderClosed&&<div className="error" style={{marginTop:10}}>Last order has closed for this session. Please speak with our team if you need assistance.</div>}
           {isLunch&&lunchWait>0&&<div className="notice" style={{marginTop:10}}><b>Next round opens in {formatTime(lunchWait)}</b><br/>You can prepare your next selection when the timer reaches 00:00.</div>}
           <div className="actions" style={{margin:'16px 0 10px',overflowX:'auto',flexWrap:'nowrap'}}>
