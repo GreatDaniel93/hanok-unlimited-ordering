@@ -8,12 +8,12 @@ const pairs=[
   ['Weekday Lunch Buffet · 60 min','工作日午餐自助 · 60 分钟'],
   ['Unlimited BBQ · 90 min','烤肉自助 · 90 分钟'],
   ['WEEKDAY LUNCH BUFFET','工作日午餐自助'],
-  ['60-minute dining session · Last order closes with 10 minutes remaining · No BBQ meat · No Starter Platter. Customers can order all active Hot Dishes and Rice & Soup items.','用餐时间 60 分钟 · 剩余 10 分钟时停止点餐 · 不包含烤肉 · 不出 Starter Platter。顾客可点所有启用的热菜、米饭和汤。'],
+  ['60-minute dining session · Last order closes with 15 minutes remaining · No BBQ meat · No Starter Platter. Customers can order all active Hot Dishes and Rice & Soup items.','用餐时间 60 分钟 · 剩余 15 分钟时停止点餐 · 不包含烤肉 · 不出 Starter Platter。顾客可点所有启用的热菜、米饭和汤。'],
   ['START 60-MIN LUNCH','开始 60 分钟午餐自助'],
   ['START 90-MIN BBQ SESSION','开始 90 分钟烤肉自助'],
   ['Weekday Lunch Buffet is available Monday to Friday. Managers can open a test session outside weekdays.','工作日午餐自助供周一至周五使用。经理可在非工作日开启测试桌。'],
   ['UNLIMITED BBQ','烤肉自助'],
-  ['Last order closes 10 minutes before session end · BBQ meat is disabled.','结束前 10 分钟停止点餐 · 烤肉已禁用。'],
+  ['Last order closes 15 minutes before session end · BBQ meat is disabled.','结束前 15 分钟停止点餐 · 烤肉已禁用。'],
   ['WEEKDAY LUNCH · 60 MIN','工作日午餐 · 60 分钟'],
   ['BBQ · NO PORK STARTER','烤肉 · 无猪肉 Starter'],
   ['BBQ · STANDARD STARTER','烤肉 · 标准 Starter'],
@@ -23,13 +23,19 @@ const pairs=[
   ['Lunch Sessions','午餐桌次'],
   ['BBQ Sessions','烤肉桌次'],
   ['Bar / Rice Serves','吧台 / 米饭份数'],
-  ['Use the Service Type filter to keep Lunch and BBQ consumption separate. Meat kg is estimated at 100g per serve.','使用“服务类型”筛选，将午餐和烤肉自助的用量分开统计。肉类重量按每份 100g 估算。']
+  ['Use the Service Type filter to keep Lunch and BBQ consumption separate. Meat kg is estimated at 100g per serve.','使用“服务类型”筛选，将午餐和烤肉自助的用量分开统计。肉类重量按每份 100g 估算。'],
+  ['Lunch Settings / 午餐设置','午餐设置'],
+  ['Weekday Lunch Buffet Settings','工作日午餐自助设置'],
+  ['CURRENT LUNCH RULES','当前午餐规则'],
+  ['SAVE LUNCH SETTINGS','保存午餐设置']
 ];
 const enToZh=new Map(pairs), zhToEn=new Map(pairs.map(([a,b])=>[b,a]));
 
 function translateText(value,zh){
   if(!value||!value.trim())return value;
-  const m=value.match(/^(\s*)([\s\S]*?)(\s*)$/);const core=m?m[2]:value;
+  const m=value.match(/^(\s*)([\s\S]*?)(\s*)$/);let core=m?m[2]:value;
+  core=core.replace('Last order closes with 10 minutes remaining','Last order closes with 15 minutes remaining');
+  core=core.replace('Last order closes 10 minutes before session end','Last order closes 15 minutes before session end');
   const map=zh?enToZh:zhToEn;let next=map.get(core)||core;
   if(zh){
     next=next.replace(/^(\d+) min remaining · WEEKDAY LUNCH · 60 MIN$/,'剩余 $1 分钟 · 工作日午餐 · 60 分钟');
