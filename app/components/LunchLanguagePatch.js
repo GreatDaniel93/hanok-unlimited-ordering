@@ -17,6 +17,15 @@ const pairs=[
   ['WEEKDAY LUNCH · 60 MIN','工作日午餐 · 60 分钟'],
   ['BBQ · NO PORK STARTER','烤肉 · 无猪肉 Starter'],
   ['BBQ · STANDARD STARTER','烤肉 · 标准 Starter'],
+  ['BBQ · NO STARTER','烤肉 · 不要 Starter'],
+  ['Starter Preference','Starter 选择'],
+  ['Standard Starter','标准 Starter'],
+  ['No Pork Starter','无猪肉 Starter'],
+  ['No Starter · Guests choose their own meat','不要 Starter · 客人自己选肉'],
+  ['NO STARTER','不要 Starter'],
+  ['No Starter Platter will be sent. Guests can immediately choose their own BBQ meats from the QR menu, subject to the normal meat-per-round limit and cooldown after each meat order.','不会发送 Starter Platter。客人可以立即从扫码菜单自行选择烤肉，仍受正常的每轮肉类上限限制；每次成功点肉后进入正常冷却时间。'],
+  ['Starter:','Starter：'],
+  ['NONE · Guests choose their own meat','无 · 客人自己选肉'],
   ['All Services','全部服务'],
   ['Weekday Lunch Buffet','工作日午餐自助'],
   ['Unlimited BBQ','烤肉自助'],
@@ -41,10 +50,12 @@ function translateText(value,zh){
     next=next.replace(/^(\d+) min remaining · WEEKDAY LUNCH · 60 MIN$/,'剩余 $1 分钟 · 工作日午餐 · 60 分钟');
     next=next.replace(/^(\d+) min remaining · BBQ · NO PORK STARTER$/,'剩余 $1 分钟 · 烤肉 · 无猪肉 Starter');
     next=next.replace(/^(\d+) min remaining · BBQ · STANDARD STARTER$/,'剩余 $1 分钟 · 烤肉 · 标准 Starter');
+    next=next.replace(/^(\d+) min remaining · BBQ · NO STARTER$/,'剩余 $1 分钟 · 烤肉 · 不要 Starter');
   }else{
     next=next.replace(/^剩余 (\d+) 分钟 · 工作日午餐 · 60 分钟$/,'$1 min remaining · WEEKDAY LUNCH · 60 MIN');
     next=next.replace(/^剩余 (\d+) 分钟 · 烤肉 · 无猪肉 Starter$/,'$1 min remaining · BBQ · NO PORK STARTER');
     next=next.replace(/^剩余 (\d+) 分钟 · 烤肉 · 标准 Starter$/,'$1 min remaining · BBQ · STANDARD STARTER');
+    next=next.replace(/^剩余 (\d+) 分钟 · 烤肉 · 不要 Starter$/,'$1 min remaining · BBQ · NO STARTER');
   }
   return m?m[1]+next+m[3]:next;
 }
