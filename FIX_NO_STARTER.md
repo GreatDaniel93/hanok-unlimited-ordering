@@ -1,1 +1,0 @@
-Temporary marker for No Starter API fix.
