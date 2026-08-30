@@ -2,6 +2,48 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+const PEXELS = id => `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=900`;
+const FRIED_CHICKEN_IMAGE = PEXELS(31097761);
+const RAW_BBQ_IMAGE = PEXELS(5774145);
+const IMAGE_BY_NAME = {
+  'Wagyu Scotch Fillet': PEXELS(28881689),
+  'Wagyu Intercostal': PEXELS(28881689),
+  'Wagyu Inside Skirt': PEXELS(28881689),
+  'Marinated LA Short Rib': RAW_BBQ_IMAGE,
+  'Marinated Angus Flap Meat': PEXELS(28881689),
+  'Wagyu Brisket': PEXELS(28881689),
+  'Pork Belly': PEXELS(8914998),
+  'Pork jowl': RAW_BBQ_IMAGE,
+  'Sausage': RAW_BBQ_IMAGE,
+  'Spicy Marinated Chicken Thigh': RAW_BBQ_IMAGE,
+  'Soy Marinated Chicken Thigh': RAW_BBQ_IMAGE,
+  'Fresh scollop': RAW_BBQ_IMAGE,
+  'Lamb cuttlet': RAW_BBQ_IMAGE,
+  'OX.tongue': RAW_BBQ_IMAGE,
+  'Spicy Squid': RAW_BBQ_IMAGE,
+  'Tempura': PEXELS(16845598),
+  'Fried Dumplings': PEXELS(16845333),
+  'Seafood Pancake': PEXELS(12913663),
+  'Tteokbokki': PEXELS(18283713),
+  'Dolsot Bibimbap': PEXELS(7491952),
+  'Steamed Rice': PEXELS(5652256),
+  'Chicken schinizel': PEXELS(31097761),
+  'Pork cutlet': PEXELS(31097761),
+  'Potato wedges': PEXELS(31097761),
+  'Deep fried noodle sushi': PEXELS(31097761),
+  'Japchae': PEXELS(7491952),
+  'Korean Rolled Egg': PEXELS(7491952),
+  'French Fries': PEXELS(31097761),
+  'Soup of the Day': PEXELS(7491952),
+};
+
+function imageFor(item){
+  const name=item?.display_name||item?.name||'';
+  const raw=item?.name||'';
+  if(/fried\s*chicken/i.test(name)||/fried\s*chicken/i.test(raw)) return FRIED_CHICKEN_IMAGE;
+  return IMAGE_BY_NAME[name]||IMAGE_BY_NAME[raw]||(item?.category==='meat'?RAW_BBQ_IMAGE:null);
+}
+
 function formatTime(ms) {
   const seconds = Math.max(0, Math.floor(ms / 1000));
   const m = Math.floor(seconds / 60);
@@ -76,6 +118,7 @@ export default function CustomerPage() {
   }
 
   function change(item,delta){
+    if(!session)return;
     const current=cart[item.id]||0;const next=Math.max(0,current+delta);const itemMax=maxFor(item);
     if(itemMax>0&&next>itemMax) return;
     if(item.category==='meat'&&delta>0&&(isLunch||meatCount>=meatLimit)) return;
@@ -84,7 +127,7 @@ export default function CustomerPage() {
   }
 
   async function submit(){
-    if(!itemCount||submitLock.current)return;
+    if(!session||!itemCount||submitLock.current)return;
     if(isLunch&&itemCount>lunchLimit){setError(`This table can order up to ${lunchLimit} items this round.`);return;}
     submitLock.current=true;setSubmitting(true);setError('');
     try{
@@ -98,30 +141,48 @@ export default function CustomerPage() {
   }
 
   return <>
-    <div className="topbar"><div className="logo">HANOK<small>WAGGA WAGGA · TABLE ORDERING</small></div></div>
-    <main className="page" style={{maxWidth:760}}>
+    <div className="topbar"><div className="logo">HANOK<small>WAGGA WAGGA · {session?'TABLE ORDERING':'MENU PREVIEW'}</small></div></div>
+    <main className="page" style={{maxWidth:820}}>
       {error&&<div className="error" style={{marginBottom:12}}>{error}</div>}
       {!data&&!error&&<div className="card"><div className="spinner"/> Loading…</div>}
       {data&&<>
         <section className="hero">
           <h1>{isLunch?'WEEKDAY LUNCH BUFFET':'HANOK UNLIMITED BBQ'}</h1>
-          <div className="actions" style={{marginTop:14}}><span className="badge new">{data.table.name}</span>{session&&<span className="badge new">{session.total_guests} Guests</span>}<span className="spacer"/><b style={{fontSize:28}}>{session?formatTime(remaining):'--:--'}</b></div>
+          <div className="actions" style={{marginTop:14}}><span className="badge new">{data.table.name}</span>{session&&<span className="badge new">{session.total_guests} Guests</span>}<span className="spacer"/><b style={{fontSize:28}}>{session?formatTime(remaining):'MENU'}</b></div>
         </section>
-        {!session ? <div className="notice" style={{marginTop:14}}><b>Your table is not active yet.</b><br/>Please wait for our team to start your dining session.</div> : <>
-          {isLunch?<div className="notice" style={{marginTop:14}}><b>Weekday Lunch Buffet · Monday–Friday</b><br/>60-minute dining session. Order up to <b>{lunchItemsPerGuest} items per guest, per round</b>. A new round opens every <b>{lunchCooldownMinutes} minutes</b>. The same dish is limited to <b>{lunchSameItemMax} portions per round</b>. BBQ meats are not included. Last order closes <b>{lunchLastOrderMinutes} minutes before finish</b>.</div>:noStarter?<div className="notice" style={{marginTop:14}}><b>Choose Your Own First Grill</b><br/>No Starter Platter has been sent. You can choose your BBQ meats directly below. The normal meat-per-round limit applies, and the cooldown starts after each meat order. Side dishes and desserts are self-service.</div>:<div className="notice" style={{marginTop:14}}><b>Hanok First Grill Selection</b><br/>Your starter platter has been sent to the meat station. Side dishes and desserts are self-service.</div>}
-          {lastOrderClosed&&<div className="error" style={{marginTop:10}}>Last order has closed for this session. Please speak with our team if you need assistance.</div>}
-          {isLunch&&lunchWait>0&&<div className="notice" style={{marginTop:10}}><b>Next round opens in {formatTime(lunchWait)}</b><br/>You can prepare your next selection when the timer reaches 00:00.</div>}
-          <div className="actions" style={{margin:'16px 0 10px',overflowX:'auto',flexWrap:'nowrap'}}>
-            {tabs.map(([k,l])=><button key={k} className={`btn ${category===k?'brand':'secondary'}`} onClick={()=>setCategory(k)}>{l}</button>)}
-          </div>
-          {!isLunch&&category==='meat'&&<div className="muted" style={{fontSize:12,margin:'0 2px 10px'}}>You may select up to <b>{meatLimit} meat portions</b> in total this round. Each item also has its own maximum shown below.</div>}
-          {isLunch&&<div className="muted" style={{fontSize:12,margin:'0 2px 10px'}}>This table may select up to <b>{lunchLimit} items this round</b> ({lunchItemsPerGuest} per guest). Each dish is limited to {lunchSameItemMax} portions per round.</div>}
-          <div className="grid grid-2">
-            {menu.map(item=>{const q=cart[item.id]||0;const wait=isLunch?lunchWait:(item.station==='meat'?meatWait:item.station==='hot'?hotWait:0);const itemMax=maxFor(item);return <div className="card" key={item.id} style={{display:'grid',gridTemplateColumns:'1fr auto',gap:12,alignItems:'center'}}>
-              <div><h3 style={{margin:'0 0 4px',fontSize:16}}>{item.display_name||item.name}</h3><div className="muted" style={{fontSize:12}}>{item.portion_label||item.description}</div>{itemMax>0&&<div style={{fontSize:11,fontWeight:700,marginTop:6}}>Max {itemMax} per round</div>}{wait>0&&<div style={{fontSize:11,color:'#8a5010',marginTop:6}}>Next order in {formatTime(wait)}</div>}</div>
-              <div className="actions" style={{alignItems:'center',flexWrap:'nowrap'}}><button className="btn secondary small" disabled={submitting} onClick={()=>change(item,-1)}>−</button><b>{q}{itemMax>0?` / ${itemMax}`:''}</b><button className="btn secondary small" disabled={submitting||wait>0||lastOrderClosed||(itemMax>0&&q>=itemMax)||(item.category==='meat'&&(isLunch||meatCount>=meatLimit))||(isLunch&&itemCount>=lunchLimit)} onClick={()=>change(item,1)}>+</button></div>
-            </div>})}
-          </div>
+
+        {!session&&<div className="notice" style={{marginTop:14}}><b>Preview our menu while you wait.</b><br/>Your table has not started yet. You can browse everything below now. Once our team starts your session, this same QR code automatically becomes your ordering menu.</div>}
+        {session&&isLunch&&<div className="notice" style={{marginTop:14}}><b>Weekday Lunch Buffet · Monday–Friday</b><br/>60-minute dining session. Order up to <b>{lunchItemsPerGuest} items per guest, per round</b>. A new round opens every <b>{lunchCooldownMinutes} minutes</b>. The same dish is limited to <b>{lunchSameItemMax} portions per round</b>. BBQ meats are not included. Last order closes <b>{lunchLastOrderMinutes} minutes before finish</b>.</div>}
+        {session&&!isLunch&&(noStarter?<div className="notice" style={{marginTop:14}}><b>Choose Your Own First Grill</b><br/>No Starter Platter has been sent. You can choose your BBQ meats directly below. The normal meat-per-round limit applies, and the cooldown starts after each meat order. Side dishes and desserts are self-service.</div>:<div className="notice" style={{marginTop:14}}><b>Hanok First Grill Selection</b><br/>Your starter platter has been sent to the meat station. Side dishes and desserts are self-service.</div>)}
+        {session&&lastOrderClosed&&<div className="error" style={{marginTop:10}}>Last order has closed for this session. Please speak with our team if you need assistance.</div>}
+        {session&&isLunch&&lunchWait>0&&<div className="notice" style={{marginTop:10}}><b>Next round opens in {formatTime(lunchWait)}</b><br/>You can prepare your next selection when the timer reaches 00:00.</div>}
+
+        <div className="actions" style={{margin:'16px 0 10px',overflowX:'auto',flexWrap:'nowrap'}}>
+          {tabs.map(([k,l])=><button key={k} className={`btn ${category===k?'brand':'secondary'}`} onClick={()=>setCategory(k)}>{l}</button>)}
+        </div>
+        {session&&!isLunch&&category==='meat'&&<div className="muted" style={{fontSize:12,margin:'0 2px 10px'}}>You may select up to <b>{meatLimit} meat portions</b> in total this round. Each item also has its own maximum shown below.</div>}
+        {session&&isLunch&&<div className="muted" style={{fontSize:12,margin:'0 2px 10px'}}>This table may select up to <b>{lunchLimit} items this round</b> ({lunchItemsPerGuest} per guest). Each dish is limited to {lunchSameItemMax} portions per round.</div>}
+
+        <div className="grid grid-2">
+          {menu.map(item=>{
+            const q=cart[item.id]||0;
+            const wait=session?(isLunch?lunchWait:(item.station==='meat'?meatWait:item.station==='hot'?hotWait:0)):0;
+            const itemMax=maxFor(item);
+            const img=imageFor(item);
+            return <div className="card" key={item.id} style={{padding:0,overflow:'hidden'}}>
+              {img&&<div style={{width:'100%',aspectRatio:'4 / 3',background:'#17110f',overflow:'hidden'}}><img src={img} alt="" loading="lazy" referrerPolicy="no-referrer" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/></div>}
+              <div style={{padding:14}}>
+                <h3 style={{margin:'0 0 5px',fontSize:16}}>{item.display_name||item.name}</h3>
+                <div className="muted" style={{fontSize:12}}>{item.portion_label||item.description}</div>
+                {session&&itemMax>0&&<div style={{fontSize:11,fontWeight:700,marginTop:6}}>Max {itemMax} per round</div>}
+                {session&&wait>0&&<div style={{fontSize:11,color:'#8a5010',marginTop:6}}>Next order in {formatTime(wait)}</div>}
+                {session&&<div className="actions" style={{alignItems:'center',flexWrap:'nowrap',marginTop:12}}><button className="btn secondary small" disabled={submitting} onClick={()=>change(item,-1)}>−</button><b>{q}{itemMax>0?` / ${itemMax}`:''}</b><button className="btn secondary small" disabled={submitting||wait>0||lastOrderClosed||(itemMax>0&&q>=itemMax)||(item.category==='meat'&&(isLunch||meatCount>=meatLimit))||(isLunch&&itemCount>=lunchLimit)} onClick={()=>change(item,1)}>+</button></div>}
+              </div>
+            </div>
+          })}
+        </div>
+
+        {session&&<>
           <div className="card" style={{position:'sticky',bottom:12,marginTop:16,background:'#241c18',color:'#fff',zIndex:20}}>
             <div style={{display:'flex',alignItems:'center',gap:12}}><div><b>{itemCount} items</b>{!isLunch&&<div style={{fontSize:12,color:'#d8c7aa'}}>Meat {meatCount} / {meatLimit} this round</div>}{isLunch&&<div style={{fontSize:12,color:'#d8c7aa'}}>Lunch round {itemCount} / {lunchLimit} · max {lunchSameItemMax} of the same dish</div>}</div><div className="spacer"/><button className="btn gold" disabled={!itemCount||submitting||lastOrderClosed||lunchWait>0||(isLunch&&itemCount>lunchLimit)} onClick={submit}>{submitting?'SENDING…':'PLACE ORDER'}</button></div>
           </div>
