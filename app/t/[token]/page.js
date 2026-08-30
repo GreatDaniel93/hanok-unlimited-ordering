@@ -2,57 +2,28 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-const PEXELS = id => ({
-  31097761:'/menu/fried-chicken.svg',
-  28881689:'/menu/wagyu-scotch-fillet.svg',
-  5774145:'/menu/la-short-rib.svg',
-  8914998:'/menu/pork-belly.svg',
-  16845598:'/menu/tempura.svg',
-  16845333:'/menu/fried-dumplings.svg',
-  12913663:'/menu/seafood-pancake.svg',
-  18283713:'/menu/tteokbokki.svg',
-  7491952:'/menu/dolsot-bibimbap.svg',
-  5652256:'/menu/steamed-rice.svg',
-}[id] || '/menu/wagyu-scotch-fillet.svg');
-const FRIED_CHICKEN_IMAGE = PEXELS(31097761);
-const RAW_BBQ_IMAGE = PEXELS(5774145);
+const HANOK_IMG = file => `https://hanokbbq.com.au/wp-content/uploads/2021/02/${file}`;
+const FRIED_CHICKEN_IMAGE = HANOK_IMG('%E1%84%83%E1%85%A1%E1%86%B0%E1%84%80%E1%85%A1%E1%86%BC%E1%84%8C%E1%85%A5%E1%86%BC-%E1%84%92%E1%85%AE%E1%84%85%E1%85%A1%E1%84%8B%E1%85%B5%E1%84%83%E1%85%B3_1-%E6%8B%B7%E8%B4%9D.jpg');
 const IMAGE_BY_NAME = {
-  'Wagyu Scotch Fillet': PEXELS(28881689),
-  'Wagyu Intercostal': PEXELS(28881689),
-  'Wagyu Inside Skirt': PEXELS(28881689),
-  'Marinated LA Short Rib': RAW_BBQ_IMAGE,
-  'Marinated Angus Flap Meat': PEXELS(28881689),
-  'Wagyu Brisket': PEXELS(28881689),
-  'Pork Belly': PEXELS(8914998),
-  'Pork jowl': PEXELS(8914998),
-  'Sausage': RAW_BBQ_IMAGE,
-  'Spicy Marinated Chicken Thigh': RAW_BBQ_IMAGE,
-  'Soy Marinated Chicken Thigh': RAW_BBQ_IMAGE,
-  'Fresh scollop': RAW_BBQ_IMAGE,
-  'Lamb cuttlet': RAW_BBQ_IMAGE,
-  'OX.tongue': RAW_BBQ_IMAGE,
-  'Spicy Squid': RAW_BBQ_IMAGE,
-  'Tempura': PEXELS(16845598),
-  'Fried Dumplings': PEXELS(16845333),
-  'Seafood Pancake': PEXELS(12913663),
-  'Tteokbokki': PEXELS(18283713),
-  'Dolsot Bibimbap': PEXELS(7491952),
-  'Steamed Rice': PEXELS(5652256),
-  'Chicken schinizel': FRIED_CHICKEN_IMAGE,
-  'Pork cutlet': FRIED_CHICKEN_IMAGE,
-  'Potato wedges': FRIED_CHICKEN_IMAGE,
-  'Deep fried noodle sushi': FRIED_CHICKEN_IMAGE,
-  'Japchae': PEXELS(7491952),
-  'Korean Rolled Egg': PEXELS(7491952),
-  'French Fries': FRIED_CHICKEN_IMAGE,
-  'Soup of the Day': PEXELS(7491952),
+  'Wagyu Scotch Fillet': HANOK_IMG('%E1%84%83%E1%85%B3%E1%86%BC%E1%84%89%E1%85%B5%E1%86%B7_1-%E6%8B%B7%E8%B4%9D.jpg'),
+  'Wagyu Intercostal': HANOK_IMG('%E1%84%89%E1%85%A1%E1%86%AF%E1%84%8E%E1%85%B5%E1%84%89%E1%85%A1%E1%86%AF_1-%E6%8B%B7%E8%B4%9D.jpg'),
+  'Wagyu Inside Skirt': HANOK_IMG('%E1%84%8C%E1%85%A6%E1%84%87%E1%85%B5%E1%84%8E%E1%85%AE%E1%84%85%E1%85%B5_1-%E6%8B%B7%E8%B4%9D.jpg'),
+  'Marinated LA Short Rib': HANOK_IMG('%E1%84%89%E1%85%A9%E1%84%80%E1%85%A1%E1%86%AF%E1%84%87%E1%85%B5_1-%E6%8B%B7%E8%B4%9D.jpg'),
+  'Marinated Angus Flap Meat': HANOK_IMG('%E1%84%8B%E1%85%A3%E1%86%BC%E1%84%82%E1%85%A7%E1%86%B7-%E1%84%89%E1%85%A9%E1%84%80%E1%85%A1%E1%86%AF%E1%84%87%E1%85%B5_1-%E6%8B%B7%E8%B4%9D.jpg'),
+  'Wagyu Brisket': HANOK_IMG('Wagyu-brisket-%E6%8B%B7%E8%B4%9D.jpg'),
+  'Pork Belly': HANOK_IMG('%E1%84%89%E1%85%A1%E1%86%B7%E1%84%80%E1%85%A7%E1%86%B8%E1%84%89%E1%85%A1%E1%86%AF_1-%E6%8B%B7%E8%B4%9D.jpg'),
+  'Soy Marinated Chicken Thigh': HANOK_IMG('%E1%84%80%E1%85%A1%E1%86%AB%E1%84%8C%E1%85%A1%E1%86%BC-%E1%84%8B%E1%85%A3%E1%86%BC%E1%84%82%E1%85%A7%E1%86%B7-%E1%84%80%E1%85%A1%E1%86%AF%E1%84%87%E1%85%B5_1-%E6%8B%B7%E8%B4%9D.jpg'),
+  'Fresh scollop': HANOK_IMG('Scallop.png'),
+  'Seafood Pancake': HANOK_IMG('%E1%84%89%E1%85%A2%E1%84%8B%E1%85%AE%E1%84%8C%E1%85%A5%E1%86%AB_1-%E6%8B%B7%E8%B4%9D.jpg'),
+  'Fried Dumplings': HANOK_IMG('%E1%84%80%E1%85%AE%E1%86%AB%E1%84%86%E1%85%A1%E1%86%AB%E1%84%83%E1%85%AE_1-%E6%8B%B7%E8%B4%9D.jpg'),
+  'Kimchi Pancake': HANOK_IMG('%E1%84%80%E1%85%B5%E1%86%B7%E1%84%8E%E1%85%B5%E1%84%8C%E1%85%A5%E1%86%AB_1-%E6%8B%B7%E8%B4%9D.jpg'),
 };
 
 function imageFor(item){
   const name=item?.display_name||item?.name||'';
   const raw=item?.name||'';
   if(/fried\s*chicken/i.test(name)||/fried\s*chicken/i.test(raw)) return FRIED_CHICKEN_IMAGE;
-  return IMAGE_BY_NAME[name]||IMAGE_BY_NAME[raw]||(item?.category==='meat'?RAW_BBQ_IMAGE:null);
+  return IMAGE_BY_NAME[name]||IMAGE_BY_NAME[raw]||null;
 }
 
 function formatTime(ms) {
@@ -181,7 +152,7 @@ export default function CustomerPage() {
             const itemMax=maxFor(item);
             const img=imageFor(item);
             return <div className="card" key={item.id} style={{padding:0,overflow:'hidden'}}>
-              {img&&<div style={{width:'100%',aspectRatio:'4 / 3',background:'#17110f',overflow:'hidden'}}><img src={img} alt="" loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/></div>}
+              {img&&<div style={{width:'100%',aspectRatio:'4 / 3',background:'#17110f',overflow:'hidden'}}><img src={img} alt="" loading="lazy" onError={e=>{e.currentTarget.parentElement.style.display='none'}} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/></div>}
               <div style={{padding:14}}>
                 <h3 style={{margin:'0 0 5px',fontSize:16}}>{item.display_name||item.name}</h3>
                 <div className="muted" style={{fontSize:12}}>{item.portion_label||item.description}</div>
