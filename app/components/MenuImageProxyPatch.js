@@ -1,6 +1,12 @@
 'use client';
 import { useEffect } from 'react';
 
+const LOCAL_BY_NAME = {
+  'Wagyu Scotch Fillet': '/menu/original/wagyu-scotch-fillet.jpg',
+  'Wagyu Intercostal': '/menu/original/wagyu-intercostal.jpg',
+  'Wagyu Inside Skirt': '/menu/original/wagyu-inside-skirt.jpg',
+};
+
 function proxySrc(src) {
   try {
     const u = new URL(src, window.location.origin);
@@ -13,30 +19,31 @@ function proxySrc(src) {
   }
 }
 
+function patchCards(root=document) {
+  const cards = root?.querySelectorAll ? root.querySelectorAll('.card') : [];
+  cards.forEach(card => {
+    const title = card.querySelector('h3')?.textContent?.trim();
+    const local = LOCAL_BY_NAME[title];
+    const img = card.querySelector('img');
+    if (!img) return;
+    if (local) {
+      img.onerror = null;
+      img.src = local;
+      if (img.parentElement) img.parentElement.style.display = 'block';
+      return;
+    }
+    const next = proxySrc(img.getAttribute('src') || img.src || '');
+    if (next && img.getAttribute('src') !== next) img.setAttribute('src', next);
+  });
+}
+
 export default function MenuImageProxyPatch() {
   useEffect(() => {
-    const patch = root => {
-      const imgs = root?.querySelectorAll ? root.querySelectorAll('img') : [];
-      imgs.forEach(img => {
-        const next = proxySrc(img.getAttribute('src') || img.src || '');
-        if (next && img.getAttribute('src') !== next) img.setAttribute('src', next);
-      });
-    };
-    patch(document);
-    const obs = new MutationObserver(mutations => {
-      for (const m of mutations) {
-        m.addedNodes.forEach(node => {
-          if (node.nodeType !== 1) return;
-          if (node.tagName === 'IMG') {
-            const next = proxySrc(node.getAttribute('src') || node.src || '');
-            if (next) node.setAttribute('src', next);
-          }
-          patch(node);
-        });
-      }
-    });
+    patchCards(document);
+    const timer = setInterval(() => patchCards(document), 500);
+    const obs = new MutationObserver(() => patchCards(document));
     obs.observe(document.body, { childList: true, subtree: true });
-    return () => obs.disconnect();
+    return () => { clearInterval(timer); obs.disconnect(); };
   }, []);
   return null;
 }
