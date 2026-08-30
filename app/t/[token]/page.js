@@ -2,7 +2,18 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-const PEXELS = id => `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=900`;
+const PEXELS = id => ({
+  31097761:'/menu/fried-chicken.svg',
+  28881689:'/menu/wagyu-scotch-fillet.svg',
+  5774145:'/menu/la-short-rib.svg',
+  8914998:'/menu/pork-belly.svg',
+  16845598:'/menu/tempura.svg',
+  16845333:'/menu/fried-dumplings.svg',
+  12913663:'/menu/seafood-pancake.svg',
+  18283713:'/menu/tteokbokki.svg',
+  7491952:'/menu/dolsot-bibimbap.svg',
+  5652256:'/menu/steamed-rice.svg',
+}[id] || '/menu/wagyu-scotch-fillet.svg');
 const FRIED_CHICKEN_IMAGE = PEXELS(31097761);
 const RAW_BBQ_IMAGE = PEXELS(5774145);
 const IMAGE_BY_NAME = {
@@ -13,7 +24,7 @@ const IMAGE_BY_NAME = {
   'Marinated Angus Flap Meat': PEXELS(28881689),
   'Wagyu Brisket': PEXELS(28881689),
   'Pork Belly': PEXELS(8914998),
-  'Pork jowl': RAW_BBQ_IMAGE,
+  'Pork jowl': PEXELS(8914998),
   'Sausage': RAW_BBQ_IMAGE,
   'Spicy Marinated Chicken Thigh': RAW_BBQ_IMAGE,
   'Soy Marinated Chicken Thigh': RAW_BBQ_IMAGE,
@@ -27,13 +38,13 @@ const IMAGE_BY_NAME = {
   'Tteokbokki': PEXELS(18283713),
   'Dolsot Bibimbap': PEXELS(7491952),
   'Steamed Rice': PEXELS(5652256),
-  'Chicken schinizel': PEXELS(31097761),
-  'Pork cutlet': PEXELS(31097761),
-  'Potato wedges': PEXELS(31097761),
-  'Deep fried noodle sushi': PEXELS(31097761),
+  'Chicken schinizel': FRIED_CHICKEN_IMAGE,
+  'Pork cutlet': FRIED_CHICKEN_IMAGE,
+  'Potato wedges': FRIED_CHICKEN_IMAGE,
+  'Deep fried noodle sushi': FRIED_CHICKEN_IMAGE,
   'Japchae': PEXELS(7491952),
   'Korean Rolled Egg': PEXELS(7491952),
-  'French Fries': PEXELS(31097761),
+  'French Fries': FRIED_CHICKEN_IMAGE,
   'Soup of the Day': PEXELS(7491952),
 };
 
@@ -170,7 +181,7 @@ export default function CustomerPage() {
             const itemMax=maxFor(item);
             const img=imageFor(item);
             return <div className="card" key={item.id} style={{padding:0,overflow:'hidden'}}>
-              {img&&<div style={{width:'100%',aspectRatio:'4 / 3',background:'#17110f',overflow:'hidden'}}><img src={img} alt="" loading="lazy" referrerPolicy="no-referrer" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/></div>}
+              {img&&<div style={{width:'100%',aspectRatio:'4 / 3',background:'#17110f',overflow:'hidden'}}><img src={img} alt="" loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/></div>}
               <div style={{padding:14}}>
                 <h3 style={{margin:'0 0 5px',fontSize:16}}>{item.display_name||item.name}</h3>
                 <div className="muted" style={{fontSize:12}}>{item.portion_label||item.description}</div>
