@@ -1,19 +1,12 @@
 'use client';
 import { useEffect } from 'react';
 
-const FINAL_LOCAL = {
-  'wagyu-scotch-fillet.jpg': '/menu/final/wagyu-scotch-fillet.webp',
-  'wagyu-intercostal.jpg': '/menu/final/wagyu-intercostal.webp',
-  'wagyu-inside-skirt.jpg': '/menu/final/wagyu-inside-skirt.webp',
-};
-
 function proxySrc(src) {
   try {
     const u = new URL(src, window.location.origin);
+    if (u.hostname !== 'hanokbbq.com.au') return null;
     const file = u.pathname.split('/').pop();
     if (!file) return null;
-    if (FINAL_LOCAL[file]) return FINAL_LOCAL[file];
-    if (u.hostname !== 'hanokbbq.com.au') return null;
     return `/api/menu-image?file=${encodeURIComponent(file)}`;
   } catch {
     return null;
