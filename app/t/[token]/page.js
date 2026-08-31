@@ -15,6 +15,13 @@ const LOCAL_IMAGE_BY_NAME = {
   'OX.tongue': '/menu/final/ox-tongue.webp',
   'Pork jowl': '/menu/final/pork-jowl.webp',
   'Fresh scollop': '/menu/final/scallop.webp',
+  'Fried Dumplings': '/menu/final/fried-dumplings.webp',
+  'Seafood Pancake': '/menu/final/seafood-pancake.webp',
+  'Tteokbokki': '/menu/final/tteokbokki.webp',
+  'Dolsot Bibimbap': '/menu/final/dolsot-bibimbap.webp',
+  'Steamed Rice': '/menu/final/steamed-rice.webp',
+  'Pork cutlet': '/menu/final/pork-cutlet.webp',
+  'Chicken schinizel': '/menu/final/chicken-schnitzel.webp',
 };
 
 function imageFor(item){
