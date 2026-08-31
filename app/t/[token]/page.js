@@ -2,23 +2,19 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-const HANOK_IMG = file => `https://hanokbbq.com.au/wp-content/uploads/2021/02/${file}`;
-const FRIED_CHICKEN_IMAGE = HANOK_IMG('%E1%84%83%E1%85%A1%E1%86%B0%E1%84%80%E1%85%A1%E1%86%BC%E1%84%8C%E1%85%A5%E1%86%BC-%E1%84%92%E1%85%AE%E1%84%85%E1%85%A1%E1%84%8B%E1%85%B5%E1%84%83%E1%85%B3_1-%E6%8B%B7%E8%B4%9D.jpg');
+const FRIED_CHICKEN_IMAGE = '/menu/final/fried-chicken.webp';
 const LOCAL_IMAGE_BY_NAME = {
   'Wagyu Scotch Fillet': '/menu/final/wagyu-scotch-fillet.webp',
   'Wagyu Intercostal': '/menu/final/wagyu-intercostal.webp',
   'Wagyu Inside Skirt': '/menu/final/wagyu-inside-skirt.webp',
-};
-const IMAGE_BY_NAME = {
-  'Marinated LA Short Rib': HANOK_IMG('%E1%84%89%E1%85%A9%E1%84%80%E1%85%A1%E1%86%AF%E1%84%87%E1%85%B5_1-%E6%8B%B7%E8%B4%9D.jpg'),
-  'Marinated Angus Flap Meat': HANOK_IMG('%E1%84%8B%E1%85%A3%E1%86%BC%E1%84%82%E1%85%A7%E1%86%B7-%E1%84%89%E1%85%A9%E1%84%80%E1%85%A1%E1%86%AF%E1%84%87%E1%85%B5_1-%E6%8B%B7%E8%B4%9D.jpg'),
-  'Wagyu Brisket': HANOK_IMG('Wagyu-brisket-%E6%8B%B7%E8%B4%9D.jpg'),
-  'Pork Belly': HANOK_IMG('%E1%84%89%E1%85%A1%E1%86%B7%E1%84%80%E1%85%A7%E1%86%B8%E1%84%89%E1%85%A1%E1%86%AF_1-%E6%8B%B7%E8%B4%9D.jpg'),
-  'Soy Marinated Chicken Thigh': HANOK_IMG('%E1%84%80%E1%85%A1%E1%86%AB%E1%84%8C%E1%85%A1%E1%86%BC-%E1%84%8B%E1%85%A3%E1%86%BC%E1%84%82%E1%85%A7%E1%86%B7-%E1%84%80%E1%85%A1%E1%86%AF%E1%84%87%E1%85%B5_1-%E6%8B%B7%E8%B4%9D.jpg'),
-  'Fresh scollop': HANOK_IMG('Scallop.png'),
-  'Seafood Pancake': HANOK_IMG('%E1%84%89%E1%85%A2%E1%84%8B%E1%85%AE%E1%84%8C%E1%85%A5%E1%86%AB_1-%E6%8B%B7%E8%B4%9D.jpg'),
-  'Fried Dumplings': HANOK_IMG('%E1%84%80%E1%85%AE%E1%86%AB%E1%84%86%E1%85%A1%E1%86%AB%E1%84%83%E1%85%AE_1-%E6%8B%B7%E8%B4%9D.jpg'),
-  'Kimchi Pancake': HANOK_IMG('%E1%84%80%E1%85%B5%E1%86%B7%E1%84%8E%E1%85%B5%E1%84%8C%E1%85%A5%E1%86%AB_1-%E6%8B%B7%E8%B4%9D.jpg'),
+  'Marinated LA Short Rib': '/menu/final/la-short-rib.webp',
+  'Marinated Angus Flap Meat': '/menu/final/angus-flap-meat.webp',
+  'Wagyu Brisket': '/menu/final/wagyu-brisket.webp',
+  'Pork Belly': '/menu/final/pork-belly.webp',
+  'Lamb cuttlet': '/menu/final/lamb-cutlet.webp',
+  'OX.tongue': '/menu/final/ox-tongue.webp',
+  'Pork jowl': '/menu/final/pork-jowl.webp',
+  'Fresh scollop': '/menu/final/scallop.webp',
 };
 
 function imageFor(item){
@@ -26,7 +22,7 @@ function imageFor(item){
   const raw=item?.name||'';
   if(LOCAL_IMAGE_BY_NAME[name]||LOCAL_IMAGE_BY_NAME[raw]) return LOCAL_IMAGE_BY_NAME[name]||LOCAL_IMAGE_BY_NAME[raw];
   if(/fried\s*chicken/i.test(name)||/fried\s*chicken/i.test(raw)) return FRIED_CHICKEN_IMAGE;
-  return IMAGE_BY_NAME[name]||IMAGE_BY_NAME[raw]||null;
+  return null;
 }
 
 function formatTime(ms) {
