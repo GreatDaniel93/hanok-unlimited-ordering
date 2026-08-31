@@ -4,10 +4,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 const HANOK_IMG = file => `https://hanokbbq.com.au/wp-content/uploads/2021/02/${file}`;
 const FRIED_CHICKEN_IMAGE = HANOK_IMG('%E1%84%83%E1%85%A1%E1%86%B0%E1%84%80%E1%85%A1%E1%86%BC%E1%84%8C%E1%85%A5%E1%86%BC-%E1%84%92%E1%85%AE%E1%84%85%E1%85%A1%E1%84%8B%E1%85%B5%E1%84%83%E1%85%B3_1-%E6%8B%B7%E8%B4%9D.jpg');
+const LOCAL_IMAGE_BY_NAME = {
+  'Wagyu Scotch Fillet': '/menu/final/wagyu-scotch-fillet.webp',
+  'Wagyu Intercostal': '/menu/final/wagyu-intercostal.webp',
+  'Wagyu Inside Skirt': '/menu/final/wagyu-inside-skirt.webp',
+};
 const IMAGE_BY_NAME = {
-  'Wagyu Scotch Fillet': HANOK_IMG('%E1%84%83%E1%85%B3%E1%86%BC%E1%84%89%E1%85%B5%E1%86%B7_1-%E6%8B%B7%E8%B4%9D.jpg'),
-  'Wagyu Intercostal': HANOK_IMG('%E1%84%89%E1%85%A1%E1%86%AF%E1%84%8E%E1%85%B5%E1%84%89%E1%85%A1%E1%86%AF_1-%E6%8B%B7%E8%B4%9D.jpg'),
-  'Wagyu Inside Skirt': HANOK_IMG('%E1%84%8C%E1%85%A6%E1%84%87%E1%85%B5%E1%84%8E%E1%85%AE%E1%84%85%E1%85%B5_1-%E6%8B%B7%E8%B4%9D.jpg'),
   'Marinated LA Short Rib': HANOK_IMG('%E1%84%89%E1%85%A9%E1%84%80%E1%85%A1%E1%86%AF%E1%84%87%E1%85%B5_1-%E6%8B%B7%E8%B4%9D.jpg'),
   'Marinated Angus Flap Meat': HANOK_IMG('%E1%84%8B%E1%85%A3%E1%86%BC%E1%84%82%E1%85%A7%E1%86%B7-%E1%84%89%E1%85%A9%E1%84%80%E1%85%A1%E1%86%AF%E1%84%87%E1%85%B5_1-%E6%8B%B7%E8%B4%9D.jpg'),
   'Wagyu Brisket': HANOK_IMG('Wagyu-brisket-%E6%8B%B7%E8%B4%9D.jpg'),
@@ -22,6 +24,7 @@ const IMAGE_BY_NAME = {
 function imageFor(item){
   const name=item?.display_name||item?.name||'';
   const raw=item?.name||'';
+  if(LOCAL_IMAGE_BY_NAME[name]||LOCAL_IMAGE_BY_NAME[raw]) return LOCAL_IMAGE_BY_NAME[name]||LOCAL_IMAGE_BY_NAME[raw];
   if(/fried\s*chicken/i.test(name)||/fried\s*chicken/i.test(raw)) return FRIED_CHICKEN_IMAGE;
   return IMAGE_BY_NAME[name]||IMAGE_BY_NAME[raw]||null;
 }
