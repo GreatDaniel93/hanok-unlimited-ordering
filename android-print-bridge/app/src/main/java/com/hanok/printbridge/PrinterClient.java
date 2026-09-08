@@ -17,9 +17,13 @@ public final class PrinterClient {
         out.write(new byte[]{0x1d,0x21,0x33});
         out.write("T01\n".getBytes(StandardCharsets.US_ASCII));
         out.write(new byte[]{0x1d,0x21,0x11,0x1d,0x42,0x01});
-        out.write((" "+name+" \n").getBytes(StandardCharsets.US_ASCII));
+        String label=" "+name+" \n";
+        if(EscPosRaster.needsRaster(label)) out.write(EscPosRaster.render(label));
+        else out.write(label.getBytes(StandardCharsets.US_ASCII));
         out.write(new byte[]{0x1d,0x42,0x00,0x1d,0x21,0x00,0x1b,0x61,0x00});
-        out.write("\nWagyu Scotch Fillet   x 2\nFried Chicken          x 1\n\nBRIDGE TEST OK\n\n\n".getBytes(StandardCharsets.US_ASCII));
+        out.write("\nWagyu Scotch Fillet   x 2\nFried Chicken          x 1\n".getBytes(StandardCharsets.US_ASCII));
+        out.write(EscPosRaster.render("中文测试：五花肉 x2\n海鲜煎饼 x1\n"));
+        out.write("\nBRIDGE TEST OK\n\n\n".getBytes(StandardCharsets.US_ASCII));
         out.write(new byte[]{0x1d,0x56,0x00});
         out.flush();
         s.close();
