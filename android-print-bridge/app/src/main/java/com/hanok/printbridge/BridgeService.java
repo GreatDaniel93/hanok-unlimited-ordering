@@ -428,7 +428,7 @@ public class BridgeService extends Service {
 
     private static String read(InputStream in)throws Exception{if(in==null)return"";ByteArrayOutputStream b=new ByteArrayOutputStream();byte[]x=new byte[4096];int n;while((n=in.read(x))>0)b.write(x,0,n);return new String(b.toByteArray(),StandardCharsets.UTF_8);}
     private static void write(ByteArrayOutputStream b,byte[]x)throws Exception{b.write(x);}
-    private static void txt(ByteArrayOutputStream b,String s)throws Exception{b.write(s.getBytes(StandardCharsets.US_ASCII));}
+    private static void txt(ByteArrayOutputStream b,String s)throws Exception{if(EscPosRaster.needsRaster(s))b.write(EscPosRaster.render(s));else b.write(s.getBytes(StandardCharsets.US_ASCII));}
     private static String isoHoursAgo(int hours){return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX",Locale.US).format(new Date(System.currentTimeMillis()-hours*60L*60L*1000L));}
     private static String shortMsg(Throwable e){String s=e.getMessage();if(s==null||s.trim().isEmpty())s=e.getClass().getSimpleName();return s.length()>160?s.substring(0,160):s;}
     private static String sha256(String s){try{MessageDigest d=MessageDigest.getInstance("SHA-256");byte[] b=d.digest(String.valueOf(s).getBytes(StandardCharsets.UTF_8));StringBuilder out=new StringBuilder();for(byte x:b)out.append(String.format(Locale.US,"%02x",x));return out.toString();}catch(Exception e){return Integer.toHexString(String.valueOf(s).hashCode());}}
